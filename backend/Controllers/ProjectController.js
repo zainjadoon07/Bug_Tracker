@@ -1,4 +1,5 @@
 const { Project, User } = require('../Models');
+const { Op } = require('sequelize');
 
 exports.createProject = async (req, res) => {
   try {
@@ -27,7 +28,11 @@ exports.createProject = async (req, res) => {
 
 exports.getProjects = async (req, res) => {
   try {
+    const showDeleted = req.query.deleted === 'true';
     const projects = await Project.findAll({
+      where: {
+        deleted_at: showDeleted ? { [Op.ne]: null } : null
+      },
       include: [
         {
           model: User,
@@ -41,5 +46,109 @@ exports.getProjects = async (req, res) => {
   } catch (error) {
     console.error('Get projects error:', error);
     res.status(500).json({ error: 'Internal server error retrieving projects' });
+  }
+};
+
+exports.updateProject = async (req, res) => {
+  try {
+    const { project_name, description } = req.body;
+    const project = await Project.findByPk(req.params.id);
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    if (project.deleted_at !== null) {
+      return res.status(400).json({ error: 'Cannot modify a deleted project.' });
+    }
+
+    if (project_name !== undefined) {
+      if (!project_name.trim()) {
+        return res.status(400).json({ error: 'Project name cannot be empty' });
+      }
+      project.project_name = project_name;
+    }
+    if (description !== undefined) {
+      project.description = description;
+    }
+
+    await project.save();
+
+    res.json({
+      message: 'Project updated successfully',
+      project
+    });
+  } catch (error) {
+    console.error('Update project error:', error);
+    res.status(500).json({ error: 'Internal server error updating project' });
+  }
+};
+
+exports.softDeleteProject = async (req, res) => {
+  try {
+    const project = await Project.findByPk(req.params.id);
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    if (project.deleted_at !== null) {
+      return res.status(400).json({ error: 'Project is already deleted' });
+    }
+
+    project.deleted_at = new Date();
+    await project.save();
+
+    res.json({
+      message: 'Project soft-deleted successfully',
+      project
+    });
+  } catch (error) {
+    console.error('Soft delete project error:', error);
+    res.status(500).json({ error: 'Internal server error deleting project' });
+  }
+};
+
+exports.restoreProject = async (req, res) => {
+  try {
+    const project = await Project.findByPk(req.params.id);
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    if (project.deleted_at === null) {
+      return res.status(400).json({ error: 'Project is not deleted' });
+    }
+
+    project.deleted_at = null;
+    await project.save();
+
+    res.json({
+      message: 'Project restored successfully',
+      project
+    });
+  } catch (error) {
+    console.error('Restore project error:', error);
+    res.status(500).json({ error: 'Internal server error restoring project' });
+  }
+};
+
+exports.permanentlyDeleteProject = async (req, res) => {
+  try {
+    const project = await Project.findByPk(req.params.id);
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    await project.destroy();
+
+    res.json({
+      message: 'Project permanently deleted'
+    });
+  } catch (error) {
+    console.error('Permanent delete project error:', error);
+    res.status(500).json({ error: 'Internal server error purging project' });
   }
 };

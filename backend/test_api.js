@@ -195,12 +195,6 @@ const runTests = async () => {
       // Developer updates status to "Resolved"
       await request('PUT', `/api/bugs/${bugId}`, { status: 'Resolved' }, developerToken);
 
-      // Tester marks status as "Closed"
-      const closeRes = await request('PUT', `/api/bugs/${bugId}`, {
-        status: 'Closed'
-      }, testerToken);
-      console.log(`  - Tester closes resolved bug: ${closeRes.status === 200 && closeRes.body.bug.status === 'Closed' ? 'PASS' : 'FAIL'} (${closeRes.status})`);
-
       // --- 6. COMMENTS ---
       console.log('\n\x1b[33m%s\x1b[0m', 'Step 6: Testing Bug Comment Threads...');
       const commentRes = await request('POST', `/api/comments/${bugId}`, {
@@ -210,6 +204,24 @@ const runTests = async () => {
 
       const getCommentsRes = await request('GET', `/api/comments/${bugId}`, null, developerToken);
       console.log(`  - Retrieve comment count: ${getCommentsRes.status === 200 && getCommentsRes.body.length === 1 ? 'PASS' : 'FAIL'} (${getCommentsRes.status})`);
+
+      // Tester marks status as "Closed"
+      const closeRes = await request('PUT', `/api/bugs/${bugId}`, {
+        status: 'Closed'
+      }, testerToken);
+      console.log(`  - Tester closes resolved bug: ${closeRes.status === 200 && closeRes.body.bug.status === 'Closed' ? 'PASS' : 'FAIL'} (${closeRes.status})`);
+
+      // Test block comments on closed bugs (Should fail with 400)
+      const closedCommentRes = await request('POST', `/api/comments/${bugId}`, {
+        message: 'Commenting on a closed bug'
+      }, adminToken);
+      console.log(`  - Comment block on Closed bug validation (Admin): ${closedCommentRes.status === 400 ? 'PASS' : 'FAIL'} (${closedCommentRes.status})`);
+
+      // Test block non-admin re-opening (Should fail with 403)
+      const closedUpdateRes = await request('PUT', `/api/bugs/${bugId}`, {
+        status: 'Open'
+      }, developerToken);
+      console.log(`  - Reassign/Reopen block on Closed bug validation (Developer): ${closedUpdateRes.status === 403 ? 'PASS' : 'FAIL'} (${closedUpdateRes.status})`);
 
       // --- 7. DASHBOARD METRICS ---
       console.log('\n\x1b[33m%s\x1b[0m', 'Step 7: Testing Dashboard Aggregations...');

@@ -12,20 +12,38 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('Developer');
   const [error, setError] = useState('');
+  const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setSubmitting(true);
+    setFormErrors({});
 
-    if (!name || !email || !password || !role) {
-      setError('Please fill in all fields');
-      setSubmitting(false);
+    const newErrors = {};
+    if (!name.trim()) {
+      newErrors.name = "Please enter your full name.";
+    }
+
+    if (!email) {
+      newErrors.email = "Please enter your email address.";
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = "Please enter a valid email address.";
+    }
+
+    if (!password) {
+      newErrors.password = "Please enter a password.";
+    } else if (password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters.";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setFormErrors(newErrors);
       return;
     }
 
+    setSubmitting(true);
     const res = await register(name, email, password, role);
     if (!res.success) {
       setError(res.error || 'Registration failed');
@@ -34,7 +52,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="min-h-screen w-full flex items-center justify-center bg-page-bg bg-dot-pattern relative overflow-hidden px-4 py-8">
+    <main className="min-h-screen w-full flex items-center justify-center bg-page-bg relative overflow-hidden px-4 py-8">
       {/* Theme Toggle Button */}
       <ThemeToggle />
 
@@ -60,7 +78,7 @@ export default function RegisterPage() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} noValidate className="space-y-6">
             <div>
               <label className="block text-label text-xs font-semibold uppercase tracking-wider mb-2 font-sans" htmlFor="name">
                 Full Name
@@ -74,13 +92,24 @@ export default function RegisterPage() {
                 <input
                   id="name"
                   type="text"
-                  required
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    setFormErrors(prev => ({ ...prev, name: '' }));
+                  }}
                   placeholder="Jane Doe"
-                  className="w-full bg-input-bg border border-input-border rounded-xl pl-11 pr-4 py-3 text-page-fg placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-sans"
+                  className={`w-full bg-input-bg border rounded-xl pl-11 pr-4 py-3 text-page-fg placeholder-slate-500 focus:outline-none transition-all font-sans ${
+                    formErrors.name 
+                      ? 'border-rose-500/50 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20' 
+                      : 'border-input-border focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
+                  }`}
                 />
               </div>
+              {formErrors.name && (
+                <p className="text-rose-400 text-xs mt-1.5 flex items-center gap-1 font-sans">
+                  ⚠️ {formErrors.name}
+                </p>
+              )}
             </div>
 
             <div>
@@ -96,13 +125,24 @@ export default function RegisterPage() {
                 <input
                   id="email"
                   type="email"
-                  required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setFormErrors(prev => ({ ...prev, email: '' }));
+                  }}
                   placeholder="jane.doe@example.com"
-                  className="w-full bg-input-bg border border-input-border rounded-xl pl-11 pr-4 py-3 text-page-fg placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-sans"
+                  className={`w-full bg-input-bg border rounded-xl pl-11 pr-4 py-3 text-page-fg placeholder-slate-500 focus:outline-none transition-all font-sans ${
+                    formErrors.email 
+                      ? 'border-rose-500/50 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20' 
+                      : 'border-input-border focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
+                  }`}
                 />
               </div>
+              {formErrors.email && (
+                <p className="text-rose-400 text-xs mt-1.5 flex items-center gap-1 font-sans">
+                  ⚠️ {formErrors.email}
+                </p>
+              )}
             </div>
 
             <div>
@@ -118,11 +158,17 @@ export default function RegisterPage() {
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setFormErrors(prev => ({ ...prev, password: '' }));
+                  }}
                   placeholder="••••••••••••"
-                  className="w-full bg-input-bg border border-input-border rounded-xl pl-11 pr-11 py-3 text-page-fg placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-sans"
+                  className={`w-full bg-input-bg border rounded-xl pl-11 pr-11 py-3 text-page-fg placeholder-slate-500 focus:outline-none transition-all font-sans ${
+                    formErrors.password 
+                      ? 'border-rose-500/50 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20' 
+                      : 'border-input-border focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
+                  }`}
                 />
                 <button
                   type="button"
@@ -141,6 +187,11 @@ export default function RegisterPage() {
                   )}
                 </button>
               </div>
+              {formErrors.password && (
+                <p className="text-rose-400 text-xs mt-1.5 flex items-center gap-1 font-sans">
+                  ⚠️ {formErrors.password}
+                </p>
+              )}
             </div>
 
             <div>

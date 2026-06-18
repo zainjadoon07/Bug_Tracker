@@ -3,15 +3,18 @@
 import React from 'react';
 import { useTheme } from '../../context/ThemeContext';
 
-export default function ThemeToggle() {
+export default function ThemeToggle({ className }) {
   const { theme, toggleTheme } = useTheme();
+
+  const defaultClasses = "fixed top-4 right-4 z-50 p-3 rounded-full bg-card-bg border border-card-border text-page-fg shadow-lg hover:scale-105 active:scale-95 transition-all cursor-pointer backdrop-blur";
+  const appliedClasses = className !== undefined ? className : defaultClasses;
 
   return (
     <button
       onClick={toggleTheme}
       type="button"
       aria-label="Toggle Theme"
-      className="fixed top-4 right-4 z-50 p-3 rounded-full bg-card-bg border border-card-border text-page-fg shadow-lg hover:scale-105 active:scale-95 transition-all cursor-pointer backdrop-blur"
+      className={appliedClasses}
     >
       {theme === 'dark' ? (
         // Sun icon for light mode option

@@ -32,7 +32,7 @@ export default function RootLayout({ children }) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${f1Font.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-page-bg text-page-fg font-sans transition-colors duration-500">
+      <body className="min-h-full flex flex-col bg-dot-pattern text-page-fg font-sans transition-colors duration-500">
         <ThemeProvider>
           <AuthProvider>
             {children}

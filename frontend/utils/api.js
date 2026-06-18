@@ -29,6 +29,7 @@ const apiFetch = async (endpoint, options = {}) => {
 };
 
 export const api = {
+  // Auth
   register: (name, email, password, role) => 
     apiFetch('/auth/register', {
       method: 'POST',
@@ -39,5 +40,81 @@ export const api = {
     apiFetch('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password })
-    })
+    }),
+
+  getUsers: () => 
+    apiFetch('/auth/users', { method: 'GET' }),
+
+  // Dashboard Stats
+  getDashboardStats: () => 
+    apiFetch('/dashboard/stats', { method: 'GET' }),
+
+  // Projects
+  getProjects: (deleted = false) => 
+    apiFetch(deleted ? '/projects?deleted=true' : '/projects', { method: 'GET' }),
+
+  createProject: (project_name, description) => 
+    apiFetch('/projects', {
+      method: 'POST',
+      body: JSON.stringify({ project_name, description })
+    }),
+
+  updateProject: (id, project_name, description) =>
+    apiFetch(`/projects/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ project_name, description })
+    }),
+
+  deleteProject: (id) =>
+    apiFetch(`/projects/${id}`, { method: 'DELETE' }),
+
+  restoreProject: (id) =>
+    apiFetch(`/projects/${id}/restore`, { method: 'PUT' }),
+
+  permanentlyDeleteProject: (id) =>
+    apiFetch(`/projects/${id}/permanent`, { method: 'DELETE' }),
+
+  // Bugs
+  getBugs: (filters = {}) => {
+    const queryParams = new URLSearchParams(filters).toString();
+    const url = queryParams ? `/bugs?${queryParams}` : '/bugs';
+    return apiFetch(url, { method: 'GET' });
+  },
+
+  getBugDetails: (id) => 
+    apiFetch(`/bugs/${id}`, { method: 'GET' }),
+
+  createBug: (bugData) => 
+    apiFetch('/bugs', {
+      method: 'POST',
+      body: JSON.stringify(bugData)
+    }),
+
+  updateBug: (id, updateData) => 
+    apiFetch(`/bugs/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updateData)
+    }),
+
+  deleteBug: (id) =>
+    apiFetch(`/bugs/${id}`, { method: 'DELETE' }),
+
+  restoreBug: (id) =>
+    apiFetch(`/bugs/${id}/restore`, { method: 'PUT' }),
+
+  permanentlyDeleteBug: (id) =>
+    apiFetch(`/bugs/${id}/permanent`, { method: 'DELETE' }),
+
+  // Comments
+  getComments: (bugId) => 
+    apiFetch(`/comments/${bugId}`, { method: 'GET' }),
+
+  addComment: (bugId, message) => 
+    apiFetch(`/comments/${bugId}`, {
+      method: 'POST',
+      body: JSON.stringify({ message })
+    }),
+
+  deleteComment: (commentId) =>
+    apiFetch(`/comments/${commentId}`, { method: 'DELETE' })
 };

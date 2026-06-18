@@ -1,4 +1,4 @@
-const { Comment, User } = require('../Models');
+const { Comment, User, Bug } = require('../Models');
 
 exports.addComment = async (req, res) => {
   try {
@@ -7,6 +7,14 @@ exports.addComment = async (req, res) => {
 
     if (!message) {
       return res.status(400).json({ error: 'Comment message is required' });
+    }
+
+    const bug = await Bug.findByPk(bug_id);
+    if (!bug) {
+      return res.status(404).json({ error: 'Associated bug not found' });
+    }
+    if (bug.status === 'Closed') {
+      return res.status(400).json({ error: 'Comments are disabled on closed bugs.' });
     }
 
     const comment = await Comment.create({
@@ -55,5 +63,24 @@ exports.getComments = async (req, res) => {
   } catch (error) {
     console.error('Get comments error:', error);
     res.status(500).json({ error: 'Internal server error retrieving comments' });
+  }
+};
+
+exports.deleteComment = async (req, res) => {
+  try {
+    if (req.user.role !== 'Administrator') {
+      return res.status(403).json({ error: 'Only Administrators can delete comments' });
+    }
+
+    const comment = await Comment.findByPk(req.params.commentId);
+    if (!comment) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    await comment.destroy();
+    res.json({ message: 'Comment deleted successfully' });
+  } catch (error) {
+    console.error('Delete comment error:', error);
+    res.status(500).json({ error: 'Internal server error deleting comment' });
   }
 };

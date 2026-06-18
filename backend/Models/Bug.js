@@ -57,6 +57,11 @@ const Bug = sequelize.define('Bug', {
   updated_at: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW
+  },
+  deleted_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null
   }
 }, {
   tableName: 'bugs',

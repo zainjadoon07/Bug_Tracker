@@ -1,36 +1,229 @@
 @import "tailwindcss";
 
+/* ============================================================
+   LIGHT MODE BASE VARIABLES (no .dark class)
+   ============================================================ */
 :root {
-  --color-background: #ffffff;
+  --color-background: #f8fafc;
   --color-foreground: #0f172a;
-  --color-card-bg: rgba(255, 255, 255, 0.7);
+  --color-card-bg: rgba(255, 255, 255, 0.88);
   --color-card-border: #e2e8f0;
-  --color-input-bg: rgba(255, 255, 255, 0.9);
+  --color-input-bg: rgba(255, 255, 255, 0.96);
   --color-input-border: #cbd5e1;
   --color-text-title: #0f172a;
   --color-text-subtitle: #475569;
   --color-text-label: #334155;
-  --color-dot: rgba(15, 23, 42, 0.06);
+  --color-dot: rgba(99, 102, 241, 0.12);
+  --color-dot-size: 6px;
+  --color-dot-gap: 38px;
 }
 
-.dark {
-  --color-background: #000000;
-  --color-foreground: #f8fafc;
-  --color-card-bg: rgba(15, 23, 42, 0.6);
+/* ============================================================
+   LIGHT MODE — Per-theme overrides (soft tinted light bg)
+   ============================================================ */
+
+/* Classic light — plain clean white, no dots */
+html[data-bg-theme="classic"] {
+  --color-background: #f8fafc;
+  --color-card-bg: rgba(255, 255, 255, 0.95);
+  --color-card-border: #e2e8f0;
+  --color-input-bg: rgba(255, 255, 255, 0.98);
+  --color-input-border: #cbd5e1;
+  --color-text-title: #0f172a;
+  --color-text-subtitle: #475569;
+  --color-text-label: #334155;
+  --color-dot: rgba(0, 0, 0, 0);
+}
+html[data-bg-theme="classic"] .bg-dot-pattern {
+  background-image: none !important;
+}
+
+/* Sentinel light — soft indigo-tinted white */
+html[data-bg-theme="sentinel"] {
+  --color-background: #f1f4fe;
+  --color-card-bg: rgba(255, 255, 255, 0.88);
+  --color-card-border: #dde2f5;
+  --color-input-bg: rgba(255, 255, 255, 0.96);
+  --color-input-border: #c7cfee;
+  --color-text-title: #0f172a;
+  --color-text-subtitle: #475569;
+  --color-text-label: #334155;
+  --color-dot: rgba(99, 102, 241, 0.14);
+  --color-dot-size: 6px;
+  --color-dot-gap: 38px;
+}
+
+/* Cyber light — soft lavender-tinted white */
+html[data-bg-theme="cyber"] {
+  --color-background: #f5f0ff;
+  --color-card-bg: rgba(255, 255, 255, 0.88);
+  --color-card-border: #e6d9ff;
+  --color-input-bg: rgba(255, 255, 255, 0.96);
+  --color-input-border: #d4bcff;
+  --color-text-title: #0f172a;
+  --color-text-subtitle: #475569;
+  --color-text-label: #334155;
+  --color-dot: rgba(168, 85, 247, 0.14);
+  --color-dot-size: 7px;
+  --color-dot-gap: 42px;
+}
+
+/* Aurora light — soft mint-tinted white */
+html[data-bg-theme="aurora"] {
+  --color-background: #f0fdfb;
+  --color-card-bg: rgba(255, 255, 255, 0.88);
+  --color-card-border: #ccf2ec;
+  --color-input-bg: rgba(255, 255, 255, 0.96);
+  --color-input-border: #b2e8df;
+  --color-text-title: #0f172a;
+  --color-text-subtitle: #475569;
+  --color-text-label: #334155;
+  --color-dot: rgba(20, 184, 166, 0.14);
+  --color-dot-size: 6px;
+  --color-dot-gap: 40px;
+}
+
+/* Sunset light — soft peach-tinted white */
+html[data-bg-theme="sunset"] {
+  --color-background: #fff5f5;
+  --color-card-bg: rgba(255, 255, 255, 0.88);
+  --color-card-border: #ffd6d9;
+  --color-input-bg: rgba(255, 255, 255, 0.96);
+  --color-input-border: #ffbfc4;
+  --color-text-title: #0f172a;
+  --color-text-subtitle: #475569;
+  --color-text-label: #334155;
+  --color-dot: rgba(244, 63, 94, 0.13);
+  --color-dot-size: 7px;
+  --color-dot-gap: 42px;
+}
+
+/* Obsidian light — soft sky-tinted white */
+html[data-bg-theme="obsidian"] {
+  --color-background: #f0f9ff;
+  --color-card-bg: rgba(255, 255, 255, 0.88);
+  --color-card-border: #bae6fd;
+  --color-input-bg: rgba(255, 255, 255, 0.96);
+  --color-input-border: #93d0f5;
+  --color-text-title: #0f172a;
+  --color-text-subtitle: #475569;
+  --color-text-label: #334155;
+  --color-dot: rgba(14, 165, 233, 0.14);
+  --color-dot-size: 6px;
+  --color-dot-gap: 38px;
+}
+
+/* ============================================================
+   DARK MODE BASE (.dark class on <html>)
+   ============================================================ */
+html.dark {
+  --color-background: #03040d;
+  --color-foreground: #ffffff;
+  --color-card-bg: rgba(10, 14, 32, 0.72);
+  --color-card-border: #181f38;
+  --color-input-bg: rgba(6, 8, 22, 0.65);
+  --color-input-border: #181f38;
+  --color-text-title: #ffffff;
+  --color-text-subtitle: #ffffff;
+  --color-text-label: #ffffff;
+  --color-dot: rgba(99, 102, 241, 0.22);
+  --color-dot-size: 7px;
+  --color-dot-gap: 42px;
+}
+
+/* ============================================================
+   DARK MODE — Per-theme overrides (near-black dark bg)
+   ============================================================ */
+
+/* Classic dark — plain dark slate, no dots */
+html.dark[data-bg-theme="classic"] {
+  --color-background: #0f172a;
+  --color-card-bg: rgba(15, 23, 42, 0.8);
   --color-card-border: #1e293b;
-  --color-input-bg: rgba(2, 6, 23, 0.5);
+  --color-input-bg: rgba(2, 6, 23, 0.6);
   --color-input-border: #1e293b;
-  --color-text-title: #f1f5f9;
-  --color-text-subtitle: #94a3b8;
-  --color-text-label: #cbd5e1;
-  --color-dot: rgba(255, 255, 255, 0.04);
+  --color-dot: rgba(0, 0, 0, 0);
+}
+html.dark[data-bg-theme="classic"] .bg-dot-pattern {
+  background-image: none !important;
 }
 
+/* Sentinel dark — near-black deep blue */
+html.dark[data-bg-theme="sentinel"] {
+  --color-background: #03040d;
+  --color-card-bg: rgba(10, 14, 32, 0.72);
+  --color-card-border: #181f38;
+  --color-input-bg: rgba(6, 8, 22, 0.65);
+  --color-input-border: #181f38;
+  --color-dot: rgba(99, 102, 241, 0.22);
+  --color-dot-size: 7px;
+  --color-dot-gap: 42px;
+}
+
+/* Cyber dark — near-black deep plum */
+html.dark[data-bg-theme="cyber"] {
+  --color-background: #040108;
+  --color-card-bg: rgba(10, 3, 20, 0.75);
+  --color-card-border: #1e0840;
+  --color-input-bg: rgba(7, 2, 15, 0.68);
+  --color-input-border: #1e0840;
+  --color-dot: rgba(168, 85, 247, 0.25);
+  --color-dot-size: 8px;
+  --color-dot-gap: 48px;
+}
+
+/* Aurora dark — near-black deep forest */
+html.dark[data-bg-theme="aurora"] {
+  --color-background: #010706;
+  --color-card-bg: rgba(3, 18, 15, 0.75);
+  --color-card-border: #072e28;
+  --color-input-bg: rgba(2, 12, 10, 0.68);
+  --color-input-border: #072e28;
+  --color-dot: rgba(20, 184, 166, 0.25);
+  --color-dot-size: 7px;
+  --color-dot-gap: 44px;
+}
+
+/* Sunset dark — near-black deep crimson */
+html.dark[data-bg-theme="sunset"] {
+  --color-background: #060102;
+  --color-card-bg: rgba(15, 3, 6, 0.75);
+  --color-card-border: #30060e;
+  --color-input-bg: rgba(10, 2, 4, 0.68);
+  --color-input-border: #30060e;
+  --color-dot: rgba(244, 63, 94, 0.25);
+  --color-dot-size: 8px;
+  --color-dot-gap: 46px;
+}
+
+/* Obsidian dark — near-black deep navy */
+html.dark[data-bg-theme="obsidian"] {
+  --color-background: #010407;
+  --color-card-bg: rgba(3, 10, 22, 0.75);
+  --color-card-border: #071530;
+  --color-input-bg: rgba(2, 7, 16, 0.68);
+  --color-input-border: #071530;
+  --color-dot: rgba(14, 165, 233, 0.25);
+  --color-dot-size: 7px;
+  --color-dot-gap: 42px;
+}
+
+/* ============================================================
+   Force white on slate utility classes in DARK MODE only
+   ============================================================ */
+html.dark .text-slate-300,
+html.dark .text-slate-400,
+html.dark .text-slate-500 {
+  color: #ffffff !important;
+}
+
+/* ============================================================
+   TAILWIND DESIGN SYSTEM TOKENS
+   ============================================================ */
 @theme {
   --font-f1: var(--font-f1), sans-serif;
   --font-sans: var(--font-f1), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 
-  /* Theme color mappings */
   --color-page-bg: var(--color-background);
   --color-page-fg: var(--color-foreground);
   --color-card-bg: var(--color-card-bg);
@@ -41,36 +234,39 @@
   --color-subtitle: var(--color-text-subtitle);
   --color-label: var(--color-text-label);
 
-  /* Custom Slow-floating animations */
   --animate-float-slow: float-slow 20s ease-in-out infinite;
   --animate-float-reverse: float-reverse 25s ease-in-out infinite;
 
   @keyframes float-slow {
-    0%, 100% {
-      transform: translate(0px, 0px) scale(1);
-    }
-    50% {
-      transform: translate(80px, 60px) scale(1.15);
-    }
+    0%, 100% { transform: translate(0px, 0px) scale(1); }
+    50%       { transform: translate(80px, 60px) scale(1.15); }
   }
 
   @keyframes float-reverse {
-    0%, 100% {
-      transform: translate(0px, 0px) scale(1);
-    }
-    50% {
-      transform: translate(-60px, -80px) scale(0.85);
-    }
+    0%, 100% { transform: translate(0px, 0px) scale(1); }
+    50%       { transform: translate(-60px, -80px) scale(0.85); }
   }
 }
 
-/* Minimal Faint Dot Grid Pattern using theme variables */
+/* ============================================================
+   BACKGROUND — Solid color + themed dot grid (no glows)
+   ============================================================ */
 .bg-dot-pattern {
-  background-image: radial-gradient(var(--color-dot) 1.5px, transparent 1.5px);
-  background-size: 28px 28px;
+  background-color: var(--color-background);
+  background-image: radial-gradient(
+    circle,
+    var(--color-dot) calc(var(--color-dot-size) / 2),
+    transparent calc(var(--color-dot-size) / 2)
+  );
+  background-size: var(--color-dot-gap) var(--color-dot-gap);
+  background-attachment: fixed;
+  transition: background-color 0.5s ease;
 }
 
-/* Add smooth global transitions for color changes */
+/* ============================================================
+   SMOOTH GLOBAL TRANSITIONS
+   ============================================================ */
 body {
-  transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease;
+  background-color: var(--color-background);
+  transition: background-color 0.5s ease, color 0.5s ease;
 }

@@ -8,4 +8,9 @@ router.get('/', authenticateToken, bugController.getBugs);
 router.get('/:id', authenticateToken, bugController.getBugById);
 router.put('/:id', authenticateToken, bugController.updateBug);
 
+// Admin-only bug routes
+router.delete('/:id', authenticateToken, authorizeRoles('Administrator'), bugController.softDeleteBug);
+router.put('/:id/restore', authenticateToken, authorizeRoles('Administrator'), bugController.restoreBug);
+router.delete('/:id/permanent', authenticateToken, authorizeRoles('Administrator'), bugController.permanentlyDeleteBug);
+
 module.exports = router;

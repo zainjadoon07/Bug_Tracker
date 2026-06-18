@@ -94,7 +94,28 @@ exports.getUsers = async (req, res) => {
     const users = await User.findAll({
       attributes: ['user_id', 'name', 'email', 'role']
     });
-    res.json(users);
+
+    // Fetch all active bugs to calculate user stats in a dialect-agnostic way
+    const { Bug } = require('../Models');
+    const bugs = await Bug.findAll({
+      where: { deleted_at: null }
+    });
+
+    const usersWithStats = users.map(user => {
+      const uJson = user.toJSON();
+      const reported = bugs.filter(b => b.reporter_id === uJson.user_id).length;
+      const assigned = bugs.filter(b => b.assigned_user === uJson.user_id && b.status !== 'Resolved' && b.status !== 'Closed').length;
+      const resolved = bugs.filter(b => b.assigned_user === uJson.user_id && (b.status === 'Resolved' || b.status === 'Closed')).length;
+
+      return {
+        ...uJson,
+        reportedCount: reported,
+        assignedCount: assigned,
+        resolvedCount: resolved
+      };
+    });
+
+    res.json(usersWithStats);
   } catch (error) {
     console.error('Get users error:', error);
     res.status(500).json({ error: 'Internal server error retrieving users' });

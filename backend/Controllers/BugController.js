@@ -1,4 +1,5 @@
 const { Bug, Project, User } = require('../Models');
+const { Op } = require('sequelize');
 
 exports.createBug = async (req, res) => {
   try {
@@ -36,13 +37,16 @@ exports.createBug = async (req, res) => {
 
 exports.getBugs = async (req, res) => {
   try {
-    const { project_id, status, assigned_user, priority } = req.query;
+    const { project_id, status, assigned_user, priority, deleted } = req.query;
     const filter = {};
 
     if (project_id) filter.project_id = project_id;
     if (status) filter.status = status;
     if (assigned_user) filter.assigned_user = assigned_user;
     if (priority) filter.priority = priority;
+
+    const showDeleted = deleted === 'true';
+    filter.deleted_at = showDeleted ? { [Op.ne]: null } : null;
 
     const bugs = await Bug.findAll({
       where: filter,
@@ -118,6 +122,10 @@ exports.updateBug = async (req, res) => {
     const { role, user_id } = req.user;
 
     // Role-based validations
+    if (bug.status === 'Closed' && role !== 'Administrator') {
+      return res.status(403).json({ error: 'Closed bugs can only be reopened or updated by Administrators.' });
+    }
+
     if (role === 'Developer') {
       // Developers can assign to themselves or update status, but not edit reporter data, priority, etc.
       if (title || description || priority || severity) {
@@ -171,5 +179,74 @@ exports.updateBug = async (req, res) => {
   } catch (error) {
     console.error('Update bug error:', error);
     res.status(500).json({ error: 'Internal server error updating bug' });
+  }
+};
+
+exports.softDeleteBug = async (req, res) => {
+  try {
+    if (req.user.role !== 'Administrator') {
+      return res.status(403).json({ error: 'Only Administrators can delete bugs' });
+    }
+
+    const bug = await Bug.findByPk(req.params.id);
+    if (!bug) {
+      return res.status(404).json({ error: 'Bug report not found' });
+    }
+
+    if (bug.deleted_at !== null) {
+      return res.status(400).json({ error: 'Bug is already deleted' });
+    }
+
+    bug.deleted_at = new Date();
+    await bug.save();
+
+    res.json({ message: 'Bug soft-deleted successfully', bug });
+  } catch (error) {
+    console.error('Soft delete bug error:', error);
+    res.status(500).json({ error: 'Internal server error deleting bug' });
+  }
+};
+
+exports.restoreBug = async (req, res) => {
+  try {
+    if (req.user.role !== 'Administrator') {
+      return res.status(403).json({ error: 'Only Administrators can restore bugs' });
+    }
+
+    const bug = await Bug.findByPk(req.params.id);
+    if (!bug) {
+      return res.status(404).json({ error: 'Bug report not found' });
+    }
+
+    if (bug.deleted_at === null) {
+      return res.status(400).json({ error: 'Bug is not deleted' });
+    }
+
+    bug.deleted_at = null;
+    await bug.save();
+
+    res.json({ message: 'Bug restored successfully', bug });
+  } catch (error) {
+    console.error('Restore bug error:', error);
+    res.status(500).json({ error: 'Internal server error restoring bug' });
+  }
+};
+
+exports.permanentlyDeleteBug = async (req, res) => {
+  try {
+    if (req.user.role !== 'Administrator') {
+      return res.status(403).json({ error: 'Only Administrators can permanently delete bugs' });
+    }
+
+    const bug = await Bug.findByPk(req.params.id);
+    if (!bug) {
+      return res.status(404).json({ error: 'Bug report not found' });
+    }
+
+    await bug.destroy();
+    res.json({ message: 'Bug permanently deleted' });
+  } catch (error) {
+    console.error('Permanent delete bug error:', error);
+    res.status(500).json({ error: 'Internal server error purging bug' });
   }
 };

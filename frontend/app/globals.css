@@ -236,6 +236,7 @@ html.dark .text-slate-500 {
 
   --animate-float-slow: float-slow 20s ease-in-out infinite;
   --animate-float-reverse: float-reverse 25s ease-in-out infinite;
+  --animate-slideIn: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 
   @keyframes float-slow {
     0%, 100% { transform: translate(0px, 0px) scale(1); }
@@ -245,6 +246,11 @@ html.dark .text-slate-500 {
   @keyframes float-reverse {
     0%, 100% { transform: translate(0px, 0px) scale(1); }
     50%       { transform: translate(-60px, -80px) scale(0.85); }
+  }
+
+  @keyframes slideIn {
+    from { transform: translateY(-1rem); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
   }
 }
 
@@ -269,4 +275,86 @@ html.dark .text-slate-500 {
 body {
   background-color: var(--color-background);
   transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+/* ============================================================
+   PRINT STYLESHEET SUPPORT
+   ============================================================ */
+@media print {
+  /* Hide all non-printable components */
+  aside,
+  header,
+  .no-print,
+  button,
+  .border-b.border-card-border.pb-px, /* Tabs Switcher */
+  .bg-card-bg.border.border-card-border.p-6.z-30.relative, /* Filters and search panel */
+  svg,
+  .fixed,
+  .toast-container {
+    display: none !important;
+  }
+
+  /* Reset layout constraints for print */
+  body, 
+  html {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 12pt !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .h-screen, 
+  .overflow-hidden,
+  .overflow-y-auto {
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  /* Reset main content container */
+  .flex-1 {
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+  }
+
+  /* Cards styling for bugs list */
+  .bg-card-bg {
+    background: #ffffff !important;
+    border: 1px solid #000000 !important;
+    color: #000000 !important;
+    page-break-inside: avoid;
+    box-shadow: none !important;
+    border-radius: 4px !important;
+    margin-bottom: 15px !important;
+    padding: 15px !important;
+  }
+
+  /* Ensure text is clearly visible on white paper */
+  .text-title,
+  h1, h2, h3, h4 {
+    color: #000000 !important;
+  }
+
+  .text-subtitle,
+  .text-slate-400,
+  .text-slate-500 {
+    color: #333333 !important;
+  }
+
+  /* Keep badge text but simplify styles */
+  .bg-indigo-500\/5,
+  .bg-rose-500\/10,
+  .bg-orange-500\/10,
+  .bg-yellow-500\/10,
+  .bg-sky-500\/10,
+  .bg-emerald-500\/10,
+  .bg-slate-500\/10 {
+    background: transparent !important;
+    border: 1px solid #333333 !important;
+    color: #000000 !important;
+  }
 }

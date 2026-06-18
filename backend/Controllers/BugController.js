@@ -1,4 +1,4 @@
-const { Bug, Project, User } = require('../Models');
+const { Bug, Project, User, AuditLog } = require('../Models');
 const { Op } = require('sequelize');
 
 exports.createBug = async (req, res) => {
@@ -25,6 +25,19 @@ exports.createBug = async (req, res) => {
       reporter_id: req.user.user_id,
       trackable_by_all: trackable_by_all || false
     });
+
+    // Create Audit Log
+    try {
+      await AuditLog.create({
+        bug_id: bug.bug_id,
+        project_id: bug.project_id,
+        user_id: req.user.user_id,
+        action_type: 'BUG_CREATED',
+        details: JSON.stringify({ title: bug.title, project_name: project.project_name })
+      });
+    } catch (auditErr) {
+      console.error('Audit logging failed for BUG_CREATED:', auditErr);
+    }
 
     res.status(201).json({
       message: 'Bug reported successfully',
@@ -175,6 +188,9 @@ exports.updateBug = async (req, res) => {
       }
     }
 
+    const oldStatus = bug.status;
+    const oldAssignedUserId = bug.assigned_user;
+
     // Apply valid status transitions or check values
     if (status) {
       const validStatuses = ['Open', 'Assigned', 'In Progress', 'Testing', 'Resolved', 'Closed'];
@@ -193,6 +209,46 @@ exports.updateBug = async (req, res) => {
 
     bug.updated_at = new Date();
     await bug.save();
+
+    // Log status change
+    if (status && status !== oldStatus) {
+      try {
+        await AuditLog.create({
+          bug_id: bug.bug_id,
+          project_id: bug.project_id,
+          user_id: req.user.user_id,
+          action_type: 'STATUS_CHANGED',
+          details: JSON.stringify({ title: bug.title, old_status: oldStatus, new_status: status })
+        });
+      } catch (auditErr) {
+        console.error('Audit logging failed for STATUS_CHANGED:', auditErr);
+      }
+    }
+
+    // Log ticket assignment change
+    if (assigned_user !== undefined && parseInt(assigned_user) !== oldAssignedUserId) {
+      try {
+        let oldAssigneeName = 'Unassigned';
+        if (oldAssignedUserId) {
+          const oldUser = await User.findByPk(oldAssignedUserId);
+          if (oldUser) oldAssigneeName = oldUser.name;
+        }
+        let newAssigneeName = 'Unassigned';
+        if (assigned_user && parseInt(assigned_user) !== 0) {
+          const newUser = await User.findByPk(assigned_user);
+          if (newUser) newAssigneeName = newUser.name;
+        }
+        await AuditLog.create({
+          bug_id: bug.bug_id,
+          project_id: bug.project_id,
+          user_id: req.user.user_id,
+          action_type: 'TICKET_ASSIGNED',
+          details: JSON.stringify({ title: bug.title, old_assignee: oldAssigneeName, new_assignee: newAssigneeName })
+        });
+      } catch (auditErr) {
+        console.error('Audit logging failed for TICKET_ASSIGNED:', auditErr);
+      }
+    }
 
     // Re-fetch with associations
     const updatedBug = await Bug.findByPk(bug.bug_id, {
@@ -231,6 +287,19 @@ exports.softDeleteBug = async (req, res) => {
     bug.deleted_at = new Date();
     await bug.save();
 
+    // Log soft delete
+    try {
+      await AuditLog.create({
+        bug_id: bug.bug_id,
+        project_id: bug.project_id,
+        user_id: req.user.user_id,
+        action_type: 'TICKET_DELETED',
+        details: JSON.stringify({ title: bug.title })
+      });
+    } catch (auditErr) {
+      console.error('Audit logging failed for TICKET_DELETED:', auditErr);
+    }
+
     res.json({ message: 'Bug soft-deleted successfully', bug });
   } catch (error) {
     console.error('Soft delete bug error:', error);
@@ -256,6 +325,19 @@ exports.restoreBug = async (req, res) => {
     bug.deleted_at = null;
     await bug.save();
 
+    // Log restore
+    try {
+      await AuditLog.create({
+        bug_id: bug.bug_id,
+        project_id: bug.project_id,
+        user_id: req.user.user_id,
+        action_type: 'TICKET_RESTORED',
+        details: JSON.stringify({ title: bug.title })
+      });
+    } catch (auditErr) {
+      console.error('Audit logging failed for TICKET_RESTORED:', auditErr);
+    }
+
     res.json({ message: 'Bug restored successfully', bug });
   } catch (error) {
     console.error('Restore bug error:', error);
@@ -272,6 +354,19 @@ exports.permanentlyDeleteBug = async (req, res) => {
     const bug = await Bug.findByPk(req.params.id);
     if (!bug) {
       return res.status(404).json({ error: 'Bug report not found' });
+    }
+
+    // Log permanent delete first, with bug_id: null to prevent cascade delete issues
+    try {
+      await AuditLog.create({
+        bug_id: null,
+        project_id: bug.project_id,
+        user_id: req.user.user_id,
+        action_type: 'TICKET_PURGED',
+        details: JSON.stringify({ title: bug.title })
+      });
+    } catch (auditErr) {
+      console.error('Audit logging failed for TICKET_PURGED:', auditErr);
     }
 
     await bug.destroy();

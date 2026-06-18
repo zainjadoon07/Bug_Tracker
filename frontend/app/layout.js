@@ -3,6 +3,8 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { AuthProvider } from "../context/AuthContext";
 import { ThemeProvider } from "../context/ThemeContext";
+import { ToastProvider } from "../context/ToastContext";
+import ToastContainer from "./components/ToastContainer";
 
 // Load local Formula 1 Black font
 const f1Font = localFont({
@@ -35,7 +37,10 @@ export default function RootLayout({ children }) {
       <body className="min-h-full flex flex-col bg-dot-pattern text-page-fg font-sans transition-colors duration-500">
         <ThemeProvider>
           <AuthProvider>
-            {children}
+            <ToastProvider>
+              <ToastContainer />
+              {children}
+            </ToastProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

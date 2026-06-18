@@ -4,9 +4,11 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { api } from '../../../utils/api';
 import { useAuth } from '../../../context/AuthContext';
+import { useToast } from '../../../context/ToastContext';
 
 export default function BugsPage() {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [bugs, setBugs] = useState([]);
   const [projects, setProjects] = useState([]);
   const [users, setUsers] = useState([]);
@@ -74,6 +76,7 @@ export default function BugsPage() {
     } catch (err) {
       console.error(err);
       setError('Failed to load bugs directory.');
+      showToast('Failed to load bugs directory.', 'error');
     } finally {
       setLoading(false);
     }
@@ -141,11 +144,14 @@ export default function BugsPage() {
       setReportErrors({});
       setShowReportModal(false);
 
+      showToast('Bug reported successfully', 'success');
+
       // Refresh directory
       await fetchBugs();
     } catch (err) {
       console.error(err);
       setError(err.message || 'Failed to file bug report.');
+      showToast(err.message || 'Failed to file bug report.', 'error');
     } finally {
       setReporting(false);
     }
@@ -165,10 +171,12 @@ export default function BugsPage() {
     try {
       setError('');
       await api.restoreBug(bugId);
+      showToast('Bug restored successfully', 'success');
       await fetchBugs();
     } catch (err) {
       console.error(err);
       setError(err.message || 'Failed to restore bug.');
+      showToast(err.message || 'Failed to restore bug.', 'error');
     }
   };
 
@@ -176,11 +184,48 @@ export default function BugsPage() {
     try {
       setError('');
       await api.permanentlyDeleteBug(bugId);
+      showToast('Bug permanently purged.', 'success');
       await fetchBugs();
     } catch (err) {
       console.error(err);
       setError(err.message || 'Failed to permanently delete bug.');
+      showToast(err.message || 'Failed to permanently delete bug.', 'error');
     }
+  };
+
+  const handleExportCSV = () => {
+    if (filteredBugs.length === 0) {
+      showToast('No bugs available to export.', 'warning');
+      return;
+    }
+
+    const headers = ['Bug ID', 'Project', 'Title', 'Priority', 'Severity', 'Status', 'Reporter', 'Assignee', 'Created At'];
+    
+    const rows = filteredBugs.map(bug => [
+      `BUG-${bug.bug_id}`,
+      `"${(bug.project?.project_name || 'N/A').replace(/"/g, '""')}"`,
+      `"${(bug.title || '').replace(/"/g, '""')}"`,
+      bug.priority || 'N/A',
+      bug.severity || 'N/A',
+      bug.status || 'N/A',
+      `"${(bug.reporter?.name || 'Unknown').replace(/"/g, '""')}"`,
+      `"${(bug.assignee?.name || 'Unassigned').replace(/"/g, '""')}"`,
+      new Date(bug.created_at).toLocaleDateString()
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `BugSentinel_Export_${Date.now()}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showToast('Bugs directory successfully exported to CSV.', 'success');
   };
 
   const triggerConfirmation = (title, message, action, buttonText = 'Confirm', isDanger = false) => {
@@ -341,17 +386,29 @@ export default function BugsPage() {
           </p>
         </div>
 
-        {isTester && currentTab === 'active' && (
+        <div className="flex items-center gap-3 no-print">
           <button
-            onClick={() => setShowReportModal(true)}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-400 ease-in-out shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 cursor-pointer"
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-title px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 shadow-lg cursor-pointer"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            <svg className="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            Report Bug
+            Export CSV
           </button>
-        )}
+
+          {isTester && currentTab === 'active' && (
+            <button
+              onClick={() => setShowReportModal(true)}
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-400 ease-in-out shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 cursor-pointer"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              Report Bug
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Tabs Switcher */}

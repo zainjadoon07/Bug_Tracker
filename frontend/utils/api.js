@@ -116,5 +116,17 @@ export const api = {
     }),
 
   deleteComment: (commentId) =>
-    apiFetch(`/comments/${commentId}`, { method: 'DELETE' })
+    apiFetch(`/comments/${commentId}`, { method: 'DELETE' }),
+
+  editComment: (commentId, message) =>
+    apiFetch(`/comments/${commentId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ message })
+    }),
+
+  getBugAudits: (bugId) =>
+    apiFetch(`/audits/bug/${bugId}`, { method: 'GET' }),
+
+  getRecentAudits: () =>
+    apiFetch('/audits/recent', { method: 'GET' })
 };

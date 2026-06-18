@@ -9,6 +9,7 @@ const projectRoutes = require('./Routes/projectRoutes');
 const bugRoutes = require('./Routes/bugRoutes');
 const commentRoutes = require('./Routes/commentRoutes');
 const dashboardRoutes = require('./Routes/dashboardRoutes');
+const auditRoutes = require('./Routes/auditRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -29,6 +30,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/bugs', bugRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/audits', auditRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

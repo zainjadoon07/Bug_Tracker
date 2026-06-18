@@ -3,9 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../../utils/api';
 import { useAuth } from '../../../context/AuthContext';
+import { useToast } from '../../../context/ToastContext';
 
 export default function ProjectsPage() {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -64,6 +66,7 @@ export default function ProjectsPage() {
     } catch (err) {
       console.error(err);
       setError('Failed to fetch projects.');
+      showToast('Failed to fetch projects.', 'error');
     } finally {
       setLoading(false);
     }
@@ -96,10 +99,12 @@ export default function ProjectsPage() {
       setDescription('');
       setProjectErrors({});
       setShowCreateModal(false);
+      showToast('Project created successfully.', 'success');
       await fetchProjects(); // Refresh the list
     } catch (err) {
       console.error(err);
       setError(err.message || 'Failed to create project.');
+      showToast(err.message || 'Failed to create project.', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -129,10 +134,12 @@ export default function ProjectsPage() {
       setEditDescription('');
       setProjectErrors({});
       setShowEditModal(false);
+      showToast('Project updated successfully.', 'success');
       await fetchProjects();
     } catch (err) {
       console.error(err);
       setError(err.message || 'Failed to update project.');
+      showToast(err.message || 'Failed to update project.', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -142,10 +149,12 @@ export default function ProjectsPage() {
     try {
       setError('');
       await api.deleteProject(project_id);
+      showToast('Project moved to recycle bin.', 'success');
       await fetchProjects();
     } catch (err) {
       console.error(err);
       setError(err.message || 'Failed to soft-delete project.');
+      showToast(err.message || 'Failed to soft-delete project.', 'error');
     }
   };
 
@@ -153,10 +162,12 @@ export default function ProjectsPage() {
     try {
       setError('');
       await api.restoreProject(project_id);
+      showToast('Project successfully restored.', 'success');
       await fetchProjects();
     } catch (err) {
       console.error(err);
       setError(err.message || 'Failed to restore project.');
+      showToast(err.message || 'Failed to restore project.', 'error');
     }
   };
 
@@ -164,10 +175,12 @@ export default function ProjectsPage() {
     try {
       setError('');
       await api.permanentlyDeleteProject(project_id);
+      showToast('Project permanently purged.', 'success');
       await fetchProjects();
     } catch (err) {
       console.error(err);
       setError(err.message || 'Failed to permanently delete project.');
+      showToast(err.message || 'Failed to permanently delete project.', 'error');
     }
   };
 

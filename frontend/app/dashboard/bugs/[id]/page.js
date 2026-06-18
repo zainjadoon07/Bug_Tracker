@@ -5,11 +5,13 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '../../../../utils/api';
 import { useAuth } from '../../../../context/AuthContext';
+import { useToast } from '../../../../context/ToastContext';
 
 export default function BugDetailPage() {
   const { id } = useParams();
   const router = useRouter();
   const { user } = useAuth();
+  const { showToast } = useToast();
 
   const [bug, setBug] = useState(null);
   const [comments, setComments] = useState([]);
@@ -22,6 +24,13 @@ export default function BugDetailPage() {
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [commentErrors, setCommentErrors] = useState({});
   const [updating, setUpdating] = useState(false);
+
+  // Comment Editing States
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingCommentText, setEditingCommentText] = useState('');
+
+  // Ticket Audit Logs States
+  const [auditLogs, setAuditLogs] = useState([]);
 
   // Custom Dropdown Open/Close states
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
@@ -51,11 +60,29 @@ export default function BugDetailPage() {
         const allUsers = await api.getUsers();
         setDevelopers(allUsers.filter(u => u.role === 'Developer' || u.role === 'Tester'));
       }
+
+      // Fetch audit history
+      try {
+        const logsData = await api.getBugAudits(id);
+        setAuditLogs(logsData);
+      } catch (logErr) {
+        console.error('Failed to retrieve bug audits:', logErr);
+      }
     } catch (err) {
       console.error(err);
       setError('Failed to retrieve bug details or comments.');
+      showToast('Failed to retrieve bug details or comments.', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUpdatedLogs = async () => {
+    try {
+      const logsData = await api.getBugAudits(id);
+      setAuditLogs(logsData);
+    } catch (logErr) {
+      console.error('Failed to retrieve bug audits:', logErr);
     }
   };
 
@@ -86,13 +113,45 @@ export default function BugDetailPage() {
       await api.addComment(id, newComment);
       setNewComment('');
       setCommentErrors({});
+      showToast('Comment posted successfully.', 'success');
+      const commentsData = await api.getComments(id);
+      setComments(commentsData);
+      await fetchUpdatedLogs();
+    } catch (err) {
+      console.error(err);
+      setError('Failed to post comment.');
+      showToast('Failed to post comment.', 'error');
+    } finally {
+      setCommentSubmitting(false);
+    }
+  };
+
+  const handleEditComment = (commentId, originalText) => {
+    setEditingCommentId(commentId);
+    setEditingCommentText(originalText);
+  };
+
+  const handleSaveEditComment = async (commentId) => {
+    if (!editingCommentText.trim()) {
+      showToast('Comment text cannot be empty.', 'error');
+      return;
+    }
+
+    setUpdating(true);
+    setError('');
+    try {
+      await api.editComment(commentId, editingCommentText);
+      setEditingCommentId(null);
+      setEditingCommentText('');
+      showToast('Comment updated successfully.', 'success');
       const commentsData = await api.getComments(id);
       setComments(commentsData);
     } catch (err) {
       console.error(err);
-      setError('Failed to post comment.');
+      setError('Failed to edit comment.');
+      showToast('Failed to edit comment.', 'error');
     } finally {
-      setCommentSubmitting(false);
+      setUpdating(false);
     }
   };
 
@@ -101,11 +160,14 @@ export default function BugDetailPage() {
     setError('');
     try {
       await api.deleteComment(commentId);
+      showToast('Comment deleted successfully.', 'success');
       const commentsData = await api.getComments(id);
       setComments(commentsData);
+      await fetchUpdatedLogs();
     } catch (err) {
       console.error(err);
       setError('Failed to delete comment.');
+      showToast('Failed to delete comment.', 'error');
     } finally {
       setUpdating(false);
     }
@@ -116,10 +178,12 @@ export default function BugDetailPage() {
     setError('');
     try {
       await api.updateBug(id, { status: newStatus });
+      showToast(`Bug status updated to ${newStatus}.`, 'success');
       await fetchBugDetails(); // Refresh all details
     } catch (err) {
       console.error(err);
       setError(err.message || 'Failed to update bug status.');
+      showToast(err.message || 'Failed to update bug status.', 'error');
     } finally {
       setUpdating(false);
     }
@@ -130,10 +194,12 @@ export default function BugDetailPage() {
     setError('');
     try {
       await api.updateBug(id, { assigned_user: newAssigneeId ? parseInt(newAssigneeId) : null });
+      showToast('Bug assignee updated.', 'success');
       await fetchBugDetails();
     } catch (err) {
       console.error(err);
       setError(err.message || 'Failed to update bug assignee.');
+      showToast(err.message || 'Failed to update bug assignee.', 'error');
     } finally {
       setUpdating(false);
     }
@@ -144,10 +210,12 @@ export default function BugDetailPage() {
     setError('');
     try {
       await api.updateBug(id, { assigned_user: user.user_id });
+      showToast('Bug ticket successfully claimed.', 'success');
       await fetchBugDetails();
     } catch (err) {
       console.error(err);
       setError(err.message || 'Failed to claim bug.');
+      showToast(err.message || 'Failed to claim bug.', 'error');
     } finally {
       setUpdating(false);
     }
@@ -158,10 +226,12 @@ export default function BugDetailPage() {
     setError('');
     try {
       await api.deleteBug(id);
+      showToast('Bug ticket soft-deleted.', 'success');
       router.push('/dashboard/bugs');
     } catch (err) {
       console.error(err);
       setError('Failed to delete bug ticket.');
+      showToast('Failed to delete bug ticket.', 'error');
     } finally {
       setUpdating(false);
     }
@@ -172,10 +242,12 @@ export default function BugDetailPage() {
     setError('');
     try {
       await api.restoreBug(id);
+      showToast('Bug ticket successfully restored.', 'success');
       await fetchBugDetails();
     } catch (err) {
       console.error(err);
       setError('Failed to restore bug ticket.');
+      showToast('Failed to restore bug ticket.', 'error');
     } finally {
       setUpdating(false);
     }
@@ -186,10 +258,12 @@ export default function BugDetailPage() {
     setError('');
     try {
       await api.permanentlyDeleteBug(id);
+      showToast('Bug ticket permanently purged.', 'success');
       router.push('/dashboard/bugs');
     } catch (err) {
       console.error(err);
       setError('Failed to permanently purge bug ticket.');
+      showToast('Failed to permanently purge bug ticket.', 'error');
     } finally {
       setUpdating(false);
     }
@@ -395,8 +469,21 @@ export default function BugDetailPage() {
                             {new Date(comm.created_at).toLocaleString()}
                           </span>
 
-                          {/* Admin only comment delete button */}
-                          {isAdmin && (
+                          {/* Edit comment button if creator */}
+                          {comm.user_id === user?.user_id && editingCommentId !== comm.comment_id && (
+                            <button
+                              onClick={() => handleEditComment(comm.comment_id, comm.message)}
+                              className="text-slate-500 hover:text-indigo-400 p-1 rounded hover:bg-indigo-500/10 transition-colors opacity-0 group-hover/comment:opacity-100 cursor-pointer"
+                              title="Edit comment"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                          )}
+
+                          {/* Delete comment button (Admin or creator) */}
+                          {(isAdmin || comm.user_id === user?.user_id) && (
                             <button
                               onClick={() => {
                                 triggerConfirmation(
@@ -417,9 +504,34 @@ export default function BugDetailPage() {
                           )}
                         </div>
                       </div>
-                      <p className="text-page-fg text-sm leading-relaxed whitespace-pre-wrap font-sans">
-                        {comm.message}
-                      </p>
+                      {editingCommentId === comm.comment_id ? (
+                        <div className="space-y-2 pt-1">
+                          <textarea
+                            value={editingCommentText}
+                            onChange={(e) => setEditingCommentText(e.target.value)}
+                            rows={2}
+                            className="w-full bg-input-bg border border-indigo-500/50 rounded-xl px-3 py-2 text-sm text-page-fg focus:outline-none focus:ring-1 focus:ring-indigo-500/20 font-sans resize-none"
+                          />
+                          <div className="flex gap-2 justify-end">
+                            <button
+                              onClick={() => { setEditingCommentId(null); setEditingCommentText(''); }}
+                              className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-title border border-slate-700 text-xs font-semibold rounded-lg cursor-pointer transition-colors"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => handleSaveEditComment(comm.comment_id)}
+                              className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg cursor-pointer transition-colors"
+                            >
+                              Save
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-page-fg text-sm leading-relaxed whitespace-pre-wrap font-sans">
+                          {comm.message}
+                        </p>
+                      )}
                     </div>
                   );
                 })}
@@ -471,6 +583,120 @@ export default function BugDetailPage() {
                   </button>
                 </div>
               </form>
+            )}
+          </div>
+
+          {/* Ticket Audit Timeline */}
+          <div className="bg-card-bg border border-card-border rounded-2xl p-6 md:p-8 space-y-6">
+            <h2 className="text-lg font-bold text-title font-sans flex items-center gap-3.5">
+              <svg className="w-5 h-5 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Ticket Audit History
+            </h2>
+
+            {auditLogs.length === 0 ? (
+              <div className="text-center p-8 bg-input-bg/30 border border-card-border rounded-xl text-subtitle text-xs font-sans">
+                No activity logs registered for this ticket yet.
+              </div>
+            ) : (
+              <div className="relative border-l-2 border-indigo-500/20 ml-3.5 pl-6 space-y-6">
+                {auditLogs.map((log) => {
+                  // Icon decider
+                  let icon = (
+                    <span className="absolute left-[-34px] top-1.5 w-5 h-5 rounded-full bg-slate-800 border-2 border-indigo-500/50 flex items-center justify-center text-[10px] text-indigo-400 font-sans">
+                      •
+                    </span>
+                  );
+                  if (log.action_type === 'BUG_CREATED') {
+                    icon = (
+                      <span className="absolute left-[-36px] top-1 w-6 h-6 rounded-full bg-slate-800 border-2 border-indigo-500 flex items-center justify-center">
+                        <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      </span>
+                    );
+                  } else if (log.action_type === 'STATUS_CHANGED') {
+                    icon = (
+                      <span className="absolute left-[-36px] top-1 w-6 h-6 rounded-full bg-slate-800 border-2 border-emerald-500 flex items-center justify-center">
+                        <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89H18v3" />
+                        </svg>
+                      </span>
+                    );
+                  } else if (log.action_type === 'TICKET_ASSIGNED') {
+                    icon = (
+                      <span className="absolute left-[-36px] top-1 w-6 h-6 rounded-full bg-slate-800 border-2 border-sky-500 flex items-center justify-center">
+                        <svg className="w-3.5 h-3.5 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </span>
+                    );
+                  } else if (log.action_type === 'COMMENT_ADDED') {
+                    icon = (
+                      <span className="absolute left-[-36px] top-1 w-6 h-6 rounded-full bg-slate-800 border-2 border-violet-500 flex items-center justify-center">
+                        <svg className="w-3.5 h-3.5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                      </span>
+                    );
+                  } else if (log.action_type === 'COMMENT_DELETED') {
+                    icon = (
+                      <span className="absolute left-[-36px] top-1 w-6 h-6 rounded-full bg-slate-800 border-2 border-rose-500 flex items-center justify-center">
+                        <svg className="w-3.5 h-3.5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </span>
+                    );
+                  } else if (log.action_type === 'TICKET_DELETED' || log.action_type === 'TICKET_PURGED') {
+                    icon = (
+                      <span className="absolute left-[-36px] top-1 w-6 h-6 rounded-full bg-slate-800 border-2 border-rose-500 flex items-center justify-center">
+                        <svg className="w-3.5 h-3.5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </span>
+                    );
+                  }
+
+                  // Message decider
+                  let detailMsg = '';
+                  try {
+                    const data = JSON.parse(log.details);
+                    if (log.action_type === 'BUG_CREATED') {
+                      detailMsg = `reported defect ticket "${data.title}"`;
+                    } else if (log.action_type === 'STATUS_CHANGED') {
+                      detailMsg = `changed status from "${data.old_status}" to "${data.new_status}"`;
+                    } else if (log.action_type === 'TICKET_ASSIGNED') {
+                      detailMsg = `assigned this ticket from "${data.old_assignee}" to "${data.new_assignee}"`;
+                    } else if (log.action_type === 'COMMENT_ADDED') {
+                      detailMsg = `posted progress comment: "${data.comment_message}"`;
+                    } else if (log.action_type === 'COMMENT_DELETED') {
+                      detailMsg = `deleted comment of ${data.author_name || 'user'}: "${data.comment_message}"`;
+                    } else if (log.action_type === 'TICKET_DELETED') {
+                      detailMsg = `moved ticket to recycle bin`;
+                    } else if (log.action_type === 'TICKET_RESTORED') {
+                      detailMsg = `restored ticket to active directory`;
+                    }
+                  } catch (e) {
+                    detailMsg = log.details;
+                  }
+
+                  return (
+                    <div key={log.log_id} className="relative pl-4 font-sans">
+                      {icon}
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-xs text-subtitle">
+                          <strong className="text-title font-semibold">{log.user?.name || 'Someone'}</strong>{' '}
+                          <span className="text-slate-400">{detailMsg}</span>
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          {new Date(log.created_at).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
@@ -731,195 +957,195 @@ export default function BugDetailPage() {
 
             {/* Admin Actions */}
             {isAdmin && (
-            <div className="space-y-3 pt-2">
-              {bug.deleted_at ? (
-                <>
-                  {/* Restore Bug Action */}
-                  <button
-                    onClick={() => {
-                      triggerConfirmation(
-                        'Restore Bug Ticket',
-                        `Are you sure you want to restore BUG-${bug.bug_id}: "${bug.title}" back to active directory?`,
-                        handleRestoreBug,
-                        'Restore Ticket',
-                        false
-                      );
-                    }}
-                    disabled={updating}
-                    className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-all duration-400 shadow-lg shadow-indigo-500/10 cursor-pointer font-sans"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 15.89M9 11l3-3 3 3m-3-3v12" />
-                    </svg>
-                    Restore Ticket
-                  </button>
-
-                  {/* Permanent/Purge Delete Bug Action */}
-                  <button
-                    onClick={() => {
-                      triggerConfirmation(
-                        'Permanently Purge Ticket',
-                        `Are you sure you want to permanently delete and purge BUG-${bug.bug_id}: "${bug.title}"? This action is destructive and cannot be undone.`,
-                        handlePurgeBug,
-                        'Purge Ticket',
-                        true
-                      );
-                    }}
-                    disabled={updating}
-                    className="w-full flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 cursor-pointer font-sans shadow-lg shadow-rose-500/10"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    Purge Ticket (Permanent)
-                  </button>
-                </>
-              ) : (
-                <>
-                  {/* Clear Bug Action */}
-                  {bug.status === 'Resolved' && (
+              <div className="space-y-3 pt-2">
+                {bug.deleted_at ? (
+                  <>
+                    {/* Restore Bug Action */}
                     <button
                       onClick={() => {
                         triggerConfirmation(
-                          'Clear & Close Bug',
-                          `Confirm that BUG-${bug.bug_id} is completed and verified. This will clear the bug and move it to the Recent Bugs directory.`,
-                          () => handleStatusChange('Closed'),
-                          'Clear & Close',
+                          'Restore Bug Ticket',
+                          `Are you sure you want to restore BUG-${bug.bug_id}: "${bug.title}" back to active directory?`,
+                          handleRestoreBug,
+                          'Restore Ticket',
                           false
                         );
                       }}
                       disabled={updating}
-                      className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-all duration-400 shadow-lg shadow-emerald-500/10 cursor-pointer font-sans"
+                      className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-all duration-400 shadow-lg shadow-indigo-500/10 cursor-pointer font-sans"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 15.89M9 11l3-3 3 3m-3-3v12" />
                       </svg>
-                      Clear & Verify Bug
+                      Restore Ticket
                     </button>
-                  )}
 
-                  {/* Soft Delete Bug Action */}
-                  <button
-                    onClick={() => {
-                      triggerConfirmation(
-                        'Move Ticket to Recycle Bin',
-                        `Are you sure you want to soft-delete BUG-${bug.bug_id}: "${bug.title}"? This ticket will move to the Admins Recycle Bin.`,
-                        handleDeleteBug,
-                        'Delete Ticket',
-                        true
-                      );
-                    }}
-                    disabled={updating}
-                    className="w-full flex items-center justify-center gap-2 bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 border border-rose-500/20 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 cursor-pointer font-sans"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    Delete Ticket
-                  </button>
-                </>
-              )}
-            </div>
-          )}
+                    {/* Permanent/Purge Delete Bug Action */}
+                    <button
+                      onClick={() => {
+                        triggerConfirmation(
+                          'Permanently Purge Ticket',
+                          `Are you sure you want to permanently delete and purge BUG-${bug.bug_id}: "${bug.title}"? This action is destructive and cannot be undone.`,
+                          handlePurgeBug,
+                          'Purge Ticket',
+                          true
+                        );
+                      }}
+                      disabled={updating}
+                      className="w-full flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 cursor-pointer font-sans shadow-lg shadow-rose-500/10"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Purge Ticket (Permanent)
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {/* Clear Bug Action */}
+                    {bug.status === 'Resolved' && (
+                      <button
+                        onClick={() => {
+                          triggerConfirmation(
+                            'Clear & Close Bug',
+                            `Confirm that BUG-${bug.bug_id} is completed and verified. This will clear the bug and move it to the Recent Bugs directory.`,
+                            () => handleStatusChange('Closed'),
+                            'Clear & Close',
+                            false
+                          );
+                        }}
+                        disabled={updating}
+                        className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-all duration-400 shadow-lg shadow-emerald-500/10 cursor-pointer font-sans"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Clear & Verify Bug
+                      </button>
+                    )}
 
-        </div>
+                    {/* Soft Delete Bug Action */}
+                    <button
+                      onClick={() => {
+                        triggerConfirmation(
+                          'Move Ticket to Recycle Bin',
+                          `Are you sure you want to soft-delete BUG-${bug.bug_id}: "${bug.title}"? This ticket will move to the Admins Recycle Bin.`,
+                          handleDeleteBug,
+                          'Delete Ticket',
+                          true
+                        );
+                      }}
+                      disabled={updating}
+                      className="w-full flex items-center justify-center gap-2 bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 border border-rose-500/20 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 cursor-pointer font-sans"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Delete Ticket
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
 
-        {/* Details on Reporter */}
-        <div className="bg-card-bg border border-card-border rounded-2xl p-6 space-y-4 text-xs text-subtitle font-sans">
-          <h3 className="font-bold text-title uppercase tracking-wider text-[10px] flex items-center gap-1">
-            <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Audit Metadata
-          </h3>
-          <div className="space-y-2.5 pt-1">
-            <div className="flex justify-between items-center">
-              <span className="flex items-center gap-1">
-                <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                Reporter:
-              </span>
-              <strong className="text-title">{bug.reporter?.name}</strong>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="flex items-center gap-1">
-                <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                Email:
-              </span>
-              <span className="text-title select-all truncate max-w-[150px]" title={bug.reporter?.email}>{bug.reporter?.email}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="flex items-center gap-1">
-                <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                Created:
-              </span>
-              <span className="text-title">{new Date(bug.created_at).toLocaleDateString()}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="flex items-center gap-1">
-                <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Last Activity:
-              </span>
-              <span className="text-title">{new Date(bug.updated_at).toLocaleDateString()}</span>
+          </div>
+
+          {/* Details on Reporter */}
+          <div className="bg-card-bg border border-card-border rounded-2xl p-6 space-y-4 text-xs text-subtitle font-sans">
+            <h3 className="font-bold text-title uppercase tracking-wider text-[10px] flex items-center gap-1">
+              <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Audit Metadata
+            </h3>
+            <div className="space-y-2.5 pt-1">
+              <div className="flex justify-between items-center">
+                <span className="flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Reporter:
+                </span>
+                <strong className="text-title">{bug.reporter?.name}</strong>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  Email:
+                </span>
+                <span className="text-title select-all truncate max-w-[150px]" title={bug.reporter?.email}>{bug.reporter?.email}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  Created:
+                </span>
+                <span className="text-title">{new Date(bug.created_at).toLocaleDateString()}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Last Activity:
+                </span>
+                <span className="text-title">{new Date(bug.updated_at).toLocaleDateString()}</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-      {/* Custom Confirmation Dialog (Modal) */ }
-  {
-    showConfirmModal && (
-      <div
-        onClick={() => {
-          setShowConfirmModal(false);
-          setConfirmAction(null);
-        }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn font-sans cursor-pointer"
-      >
-        <div
-          onClick={(e) => e.stopPropagation()}
-          className="bg-card-bg border border-card-border rounded-3xl w-full max-w-md p-8 shadow-2xl relative transition-colors duration-500 cursor-default"
-        >
-          <h2 className="text-xl font-bold text-title mb-4 font-f1">{confirmTitle}</h2>
-          <p className="text-subtitle text-sm mb-6 leading-relaxed font-sans">
-            {confirmMessage}
-          </p>
-          <div className="flex gap-4">
-            <button
-              onClick={() => {
-                setShowConfirmModal(false);
-                setConfirmAction(null);
-              }}
-              className="w-1/2 bg-card-bg hover:bg-input-bg border border-card-border hover:border-slate-400 text-title font-medium py-3 rounded-xl transition-all duration-300 cursor-pointer text-sm font-sans"
+      {/* Custom Confirmation Dialog (Modal) */}
+      {
+        showConfirmModal && (
+          <div
+            onClick={() => {
+              setShowConfirmModal(false);
+              setConfirmAction(null);
+            }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn font-sans cursor-pointer"
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="bg-card-bg border border-card-border rounded-3xl w-full max-w-md p-8 shadow-2xl relative transition-colors duration-500 cursor-default"
             >
-              Cancel
-            </button>
-            <button
-              onClick={() => {
-                if (confirmAction) confirmAction();
-                setShowConfirmModal(false);
-                setConfirmAction(null);
-              }}
-              className={`w-1/2 text-white font-medium py-3 rounded-xl transition-all duration-400 ease-in-out shadow-lg cursor-pointer text-sm font-sans ${confirmIsDanger
-                ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/10 hover:shadow-rose-500/30'
-                : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/10 hover:shadow-indigo-500/30'
-                }`}
-            >
-              {confirmButtonText}
-            </button>
+              <h2 className="text-xl font-bold text-title mb-4 font-f1">{confirmTitle}</h2>
+              <p className="text-subtitle text-sm mb-6 leading-relaxed font-sans">
+                {confirmMessage}
+              </p>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => {
+                    setShowConfirmModal(false);
+                    setConfirmAction(null);
+                  }}
+                  className="w-1/2 bg-card-bg hover:bg-input-bg border border-card-border hover:border-slate-400 text-title font-medium py-3 rounded-xl transition-all duration-300 cursor-pointer text-sm font-sans"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirmAction) confirmAction();
+                    setShowConfirmModal(false);
+                    setConfirmAction(null);
+                  }}
+                  className={`w-1/2 text-white font-medium py-3 rounded-xl transition-all duration-400 ease-in-out shadow-lg cursor-pointer text-sm font-sans ${confirmIsDanger
+                    ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/10 hover:shadow-rose-500/30'
+                    : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/10 hover:shadow-indigo-500/30'
+                    }`}
+                >
+                  {confirmButtonText}
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-    )
-  }
+        )
+      }
     </div >
   );
 }

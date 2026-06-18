@@ -5,6 +5,7 @@ const { authenticateToken, authorizeRoles } = require('../Middleware/authMiddlew
 
 router.post('/:bugId', authenticateToken, commentController.addComment);
 router.get('/:bugId', authenticateToken, commentController.getComments);
-router.delete('/:commentId', authenticateToken, authorizeRoles('Administrator'), commentController.deleteComment);
+router.put('/:commentId', authenticateToken, commentController.updateComment);
+router.delete('/:commentId', authenticateToken, commentController.deleteComment);
 
 module.exports = router;

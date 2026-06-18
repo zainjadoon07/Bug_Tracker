@@ -268,8 +268,9 @@ export default function BugsPage() {
 
   // Filter fetched bugs locally by search query and active/recent statuses
   const filteredBugs = bugs.filter(bug => {
-    if (currentTab === 'active' && bug.status === 'Closed') return false;
+    if (currentTab === 'active' && (bug.status === 'Closed' || bug.status === 'Archived')) return false;
     if (currentTab === 'recent' && bug.status !== 'Closed') return false;
+    if (currentTab === 'archived' && bug.status !== 'Archived') return false;
 
     const titleMatch = bug.title.toLowerCase().includes(searchQuery.toLowerCase());
     const descMatch = bug.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -342,6 +343,7 @@ export default function BugsPage() {
       case 'Testing': return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
       case 'Resolved': return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
       case 'Closed': return 'bg-slate-500/10 text-slate-400 border border-slate-500/20';
+      case 'Archived': return 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
       default: return 'bg-slate-500/10 text-slate-400';
     }
   };
@@ -354,6 +356,7 @@ export default function BugsPage() {
       case 'Testing': return 'text-amber-400';
       case 'Resolved': return 'text-emerald-400';
       case 'Closed': return 'text-slate-400';
+      case 'Archived': return 'text-rose-400';
       default: return 'text-slate-400';
     }
   };
@@ -366,6 +369,7 @@ export default function BugsPage() {
       case 'Testing': return 'bg-amber-500';
       case 'Resolved': return 'bg-emerald-500';
       case 'Closed': return 'bg-slate-500';
+      case 'Archived': return 'bg-rose-500';
       default: return 'bg-slate-500';
     }
   };
@@ -437,6 +441,19 @@ export default function BugsPage() {
           </svg>
           <span>Recent Bugs</span>
           <span className="bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded text-[10px] border border-emerald-500/20 font-sans">Cleared</span>
+        </button>
+        <button
+          onClick={() => setCurrentTab('archived')}
+          className={`pb-3 text-sm font-semibold tracking-wider transition-all relative cursor-pointer flex items-center gap-2 ${currentTab === 'archived'
+              ? 'text-indigo-500 font-bold border-b-2 border-indigo-500'
+              : 'text-subtitle hover:text-title'
+            }`}
+        >
+          <svg className="w-4 h-4 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+          </svg>
+          <span>Archived (Abandoned Project)</span>
+          <span className="bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded text-[10px] border border-amber-500/20 font-sans">Project Deleted</span>
         </button>
         {isAdmin && (
           <button
@@ -657,14 +674,16 @@ export default function BugsPage() {
             </svg>
           </div>
           <h3 className="text-lg font-semibold text-title">
-            {currentTab === 'deleted' ? 'No Deleted Bugs' : currentTab === 'recent' ? 'No Cleared Bugs' : 'No Active Bugs'}
+            {currentTab === 'deleted' ? 'No Deleted Bugs' : currentTab === 'recent' ? 'No Cleared Bugs' : currentTab === 'archived' ? 'No Archived Bugs' : 'No Active Bugs'}
           </h3>
           <p className="text-subtitle text-sm max-w-sm mt-1">
             {currentTab === 'deleted'
               ? 'Soft-deleted bugs reside here for permanent delete or restore.'
               : currentTab === 'recent'
                 ? 'Bugs that have been successfully resolved and cleared will display here.'
-                : 'All open development defect tickets show in this dashboard.'}
+                : currentTab === 'archived'
+                  ? 'Bugs associated with abandoned or deleted projects reside here.'
+                  : 'All open development defect tickets show in this dashboard.'}
           </p>
         </div>
       ) : (

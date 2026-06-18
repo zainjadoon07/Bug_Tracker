@@ -306,7 +306,9 @@ export default function BugDetailPage() {
   const isTester = user?.role === 'Tester';
   const isAssignedToMe = bug.assigned_user === user?.user_id;
 
-  const canUpdateStatus = !bug.deleted_at && (
+  const isAbandoned = bug.status === 'Archived' || !bug.project || !!bug.project.deleted_at;
+
+  const canUpdateStatus = !bug.deleted_at && !isAbandoned && (
     bug.trackable_by_all ||
     (bug.assigned_user && (isAdmin || isAssignedToMe))
   );
@@ -341,6 +343,7 @@ export default function BugDetailPage() {
       case 'Testing': return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
       case 'Resolved': return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
       case 'Closed': return 'bg-slate-500/10 text-slate-400 border border-slate-500/20';
+      case 'Archived': return 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
       default: return 'bg-slate-500/10 text-slate-400';
     }
   };
@@ -353,6 +356,7 @@ export default function BugDetailPage() {
       case 'Testing': return 'text-amber-400';
       case 'Resolved': return 'text-emerald-400';
       case 'Closed': return 'text-slate-400';
+      case 'Archived': return 'text-rose-400';
       default: return 'text-slate-400';
     }
   };
@@ -365,6 +369,7 @@ export default function BugDetailPage() {
       case 'Testing': return 'bg-amber-500';
       case 'Resolved': return 'bg-emerald-500';
       case 'Closed': return 'bg-slate-500';
+      case 'Archived': return 'bg-rose-500';
       default: return 'bg-slate-500';
     }
   };
@@ -399,8 +404,13 @@ export default function BugDetailPage() {
           {/* Technical Info Block */}
           <div className="bg-card-bg border border-card-border rounded-2xl p-6 md:p-8 space-y-6">
             <div>
-              <span className="text-xs text-subtitle font-medium uppercase tracking-wider font-sans">
+              <span className="text-xs text-subtitle font-medium uppercase tracking-wider font-sans flex items-center flex-wrap gap-1.5">
                 {bug.project?.project_name || 'Project Scope'}
+                {isAbandoned && (
+                  <span className="bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded text-[10px] font-bold tracking-wider font-sans uppercase">
+                    Abandoned Project
+                  </span>
+                )}
               </span>
               <h1 className="text-2xl font-bold text-title mt-1 leading-tight font-sans">
                 {bug.title}
@@ -470,7 +480,7 @@ export default function BugDetailPage() {
                           </span>
 
                           {/* Edit comment button if creator */}
-                          {comm.user_id === user?.user_id && editingCommentId !== comm.comment_id && (
+                          {comm.user_id === user?.user_id && editingCommentId !== comm.comment_id && !isAbandoned && (
                             <button
                               onClick={() => handleEditComment(comm.comment_id, comm.message)}
                               className="text-slate-500 hover:text-indigo-400 p-1 rounded hover:bg-indigo-500/10 transition-colors opacity-0 group-hover/comment:opacity-100 cursor-pointer"
@@ -483,7 +493,7 @@ export default function BugDetailPage() {
                           )}
 
                           {/* Delete comment button (Admin or creator) */}
-                          {(isAdmin || comm.user_id === user?.user_id) && (
+                          {(isAdmin || comm.user_id === user?.user_id) && !isAbandoned && (
                             <button
                               onClick={() => {
                                 triggerConfirmation(
@@ -542,6 +552,10 @@ export default function BugDetailPage() {
             {bug.deleted_at ? (
               <div className="p-4 bg-slate-800/30 border border-card-border rounded-xl text-center text-subtitle text-xs font-sans">
                 This ticket is in the recycle bin. Discussion and updates have been locked.
+              </div>
+            ) : isAbandoned ? (
+              <div className="p-4 bg-slate-800/30 border border-card-border rounded-xl text-center text-subtitle text-xs font-sans">
+                This ticket belongs to an abandoned or deleted project. Discussion and updates have been locked.
               </div>
             ) : bug.status === 'Closed' ? (
               <div className="p-4 bg-slate-800/30 border border-card-border rounded-xl text-center text-subtitle text-xs font-sans">
@@ -789,12 +803,12 @@ export default function BugDetailPage() {
                   <span className={`inline-flex px-3 py-1.5 rounded-xl text-xs font-semibold uppercase tracking-wider ${getStatusStyle(bug.status)}`}>
                     {bug.status}
                   </span>
-                  {!bug.assigned_user && !bug.trackable_by_all && (
+                  {!bug.assigned_user && !bug.trackable_by_all && !isAbandoned && (
                     <span className="text-[10px] text-amber-500/80 italic ml-2 flex items-center gap-1">
                       {isAdmin ? '⚠️ Assign member to enable status updates' : 'Waiting for Administrator to assign ticket...'}
                     </span>
                   )}
-                  {(isDeveloper || isTester) && !isAssignedToMe && bug.assigned_user && bug.status !== 'Closed' && (
+                  {isDeveloper && !isAssignedToMe && bug.assigned_user && bug.status !== 'Closed' && !isAbandoned && (
                     <span className="text-[10px] text-subtitle italic ml-2">Claim to update</span>
                   )}
                 </div>
@@ -810,7 +824,7 @@ export default function BugDetailPage() {
                 Assignee
               </label>
 
-              {(isAdmin && !bug.deleted_at) ? (
+              {(isAdmin && !bug.deleted_at && !isAbandoned) ? (
                 <div className="relative font-sans">
                   <button
                     type="button"
@@ -847,7 +861,7 @@ export default function BugDetailPage() {
                           }}
                           className="w-full text-left px-4 py-2 text-xs hover:bg-input-bg/60 transition-colors flex items-center gap-2 text-amber-500/70 font-semibold"
                         >
-                          <span className="w-2 h-2 rounded-full bg-amber-500/50"></span>
+                          <span className="w-2.5 h-2.5 rounded-full bg-amber-500/50"></span>
                           Unassigned
                         </button>
                         {developers.map((d) => (
@@ -868,7 +882,7 @@ export default function BugDetailPage() {
                     </>
                   )}
                 </div>
-              ) : ((isDeveloper || isTester) && !bug.deleted_at) ? (
+              ) : (isDeveloper && !bug.deleted_at && !isAbandoned) ? (
                 // Developer / Tester claim options, but blocked if Closed
                 <div className="font-sans">
                   {bug.status === 'Closed' ? (
@@ -913,7 +927,7 @@ export default function BugDetailPage() {
             </div>
 
             {/* Public Tracking Switch */}
-            {isAdmin && !bug.deleted_at && (
+            {isAdmin && !bug.deleted_at && !isAbandoned && (
               <div className="pt-4 border-t border-card-border/60 flex items-center justify-between font-sans">
                 <div className="flex flex-col gap-0.5">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-label">Public Tracking</span>
@@ -946,7 +960,7 @@ export default function BugDetailPage() {
               </div>
             )}
 
-            {!isAdmin && bug.trackable_by_all && (
+            {!isAdmin && bug.trackable_by_all && !isAbandoned && (
               <div className="pt-4 border-t border-card-border/60 flex items-center gap-1.5 text-[10px] text-indigo-400 font-semibold font-sans">
                 <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -956,7 +970,7 @@ export default function BugDetailPage() {
             )}
 
             {/* Admin Actions */}
-            {isAdmin && (
+            {isAdmin && !isAbandoned && (
               <div className="space-y-3 pt-2">
                 {bug.deleted_at ? (
                   <>

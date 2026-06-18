@@ -39,7 +39,7 @@ const Bug = sequelize.define('Bug', {
     allowNull: false,
     defaultValue: 'Open',
     validate: {
-      isIn: [['Open', 'Assigned', 'In Progress', 'Testing', 'Resolved', 'Closed']]
+      isIn: [['Open', 'Assigned', 'In Progress', 'Testing', 'Resolved', 'Closed', 'Archived']]
     }
   },
   reporter_id: {

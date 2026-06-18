@@ -98,7 +98,7 @@ exports.getBugById = async (req, res) => {
         {
           model: Project,
           as: 'project',
-          attributes: ['project_id', 'project_name']
+          attributes: ['project_id', 'project_name', 'deleted_at']
         },
         {
           model: User,
@@ -130,6 +130,11 @@ exports.updateBug = async (req, res) => {
 
     if (!bug) {
       return res.status(404).json({ error: 'Bug report not found' });
+    }
+
+    const project = await Project.findByPk(bug.project_id);
+    if (bug.status === 'Archived' || !project || project.deleted_at !== null) {
+      return res.status(400).json({ error: 'This ticket belongs to an abandoned or deleted project and cannot be modified.' });
     }
 
     const { title, description, priority, severity, status, assigned_user, trackable_by_all } = req.body;
@@ -182,9 +187,8 @@ exports.updateBug = async (req, res) => {
     }
 
     if (role === 'Tester') {
-      // Testers can assign to themselves, but not others
-      if (assigned_user && parseInt(assigned_user) !== user_id) {
-        return res.status(403).json({ error: 'Testers can only assign bugs to themselves.' });
+      if (assigned_user !== undefined) {
+        return res.status(403).json({ error: 'Testers are not authorized to claim or assign bugs.' });
       }
     }
 

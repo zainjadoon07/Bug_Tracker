@@ -260,6 +260,10 @@ export default function DashboardPage() {
                     textAction = `restored BUG-${log.bug_id || ''}: "${data.title}"`;
                   } else if (log.action_type === 'TICKET_PURGED') {
                     textAction = `purged bug: "${data.title}"`;
+                  } else if (log.action_type === 'PROJECT_DELETED') {
+                    textAction = `soft-deleted project: "${data.project_name}" (archived associated bugs)`;
+                  } else if (log.action_type === 'PROJECT_PURGED') {
+                    textAction = `permanently deleted project: "${data.project_name}" (archived associated bugs)`;
                   }
                 } catch (e) {
                   textAction = log.details;

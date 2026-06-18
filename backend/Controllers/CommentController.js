@@ -1,4 +1,4 @@
-const { Comment, User, Bug, AuditLog } = require('../Models');
+const { Comment, User, Bug, AuditLog, Project } = require('../Models');
 
 exports.addComment = async (req, res) => {
   try {
@@ -12,6 +12,10 @@ exports.addComment = async (req, res) => {
     const bug = await Bug.findByPk(bug_id);
     if (!bug) {
       return res.status(404).json({ error: 'Associated bug not found' });
+    }
+    const project = await Project.findByPk(bug.project_id);
+    if (bug.status === 'Archived' || !project || project.deleted_at !== null) {
+      return res.status(400).json({ error: 'This ticket belongs to an abandoned or deleted project. Comments are disabled.' });
     }
     if (bug.status === 'Closed') {
       return res.status(400).json({ error: 'Comments are disabled on closed bugs.' });
@@ -91,6 +95,14 @@ exports.updateComment = async (req, res) => {
       return res.status(404).json({ error: 'Comment not found' });
     }
 
+    const bug = await Bug.findByPk(comment.bug_id);
+    if (bug) {
+      const project = await Project.findByPk(bug.project_id);
+      if (bug.status === 'Archived' || !project || project.deleted_at !== null) {
+        return res.status(400).json({ error: 'This ticket belongs to an abandoned or deleted project. Modifying comments is disabled.' });
+      }
+    }
+
     // Only comment authors and Administrators can edit their comment
     if (comment.user_id !== req.user.user_id && req.user.role !== 'Administrator') {
       return res.status(403).json({ error: 'You are not authorized to edit this comment' });
@@ -127,12 +139,19 @@ exports.deleteComment = async (req, res) => {
       return res.status(404).json({ error: 'Comment not found' });
     }
 
+    const bug = await Bug.findByPk(comment.bug_id);
+    if (bug) {
+      const project = await Project.findByPk(bug.project_id);
+      if (bug.status === 'Archived' || !project || project.deleted_at !== null) {
+        return res.status(400).json({ error: 'This ticket belongs to an abandoned or deleted project. Deleting comments is disabled.' });
+      }
+    }
+
     // Comment author or Administrator can delete
     if (comment.user_id !== req.user.user_id && req.user.role !== 'Administrator') {
       return res.status(403).json({ error: 'You are not authorized to delete this comment' });
     }
 
-    const bug = await Bug.findByPk(comment.bug_id);
     const author = await User.findByPk(comment.user_id);
     const authorName = author ? author.name : 'Unknown';
 

@@ -1,4 +1,4 @@
-const { Project, User } = require('../Models');
+const { Project, User, Bug, AuditLog } = require('../Models');
 const { Op } = require('sequelize');
 
 exports.createProject = async (req, res) => {
@@ -99,8 +99,30 @@ exports.softDeleteProject = async (req, res) => {
     project.deleted_at = new Date();
     await project.save();
 
+    // Archive all bugs associated with this project (except Closed ones)
+    await Bug.update(
+      { status: 'Archived' },
+      { where: { project_id: project.project_id, status: { [Op.ne]: 'Closed' } } }
+    );
+
+    // Create Audit Log
+    try {
+      await AuditLog.create({
+        bug_id: null,
+        project_id: project.project_id,
+        user_id: req.user.user_id,
+        action_type: 'PROJECT_DELETED',
+        details: JSON.stringify({
+          project_name: project.project_name,
+          message: `Project "${project.project_name}" was soft-deleted, archiving all associated bugs.`
+        })
+      });
+    } catch (auditErr) {
+      console.error('Audit logging failed for PROJECT_DELETED:', auditErr);
+    }
+
     res.json({
-      message: 'Project soft-deleted successfully',
+      message: 'Project soft-deleted successfully and associated bugs archived.',
       project
     });
   } catch (error) {
@@ -142,10 +164,32 @@ exports.permanentlyDeleteProject = async (req, res) => {
       return res.status(404).json({ error: 'Project not found' });
     }
 
+    // Archive all bugs associated with this project (except Closed ones)
+    await Bug.update(
+      { status: 'Archived' },
+      { where: { project_id: project.project_id, status: { [Op.ne]: 'Closed' } } }
+    );
+
+    // Create Audit Log
+    try {
+      await AuditLog.create({
+        bug_id: null,
+        project_id: project.project_id,
+        user_id: req.user.user_id,
+        action_type: 'PROJECT_PURGED',
+        details: JSON.stringify({
+          project_name: project.project_name,
+          message: `Project "${project.project_name}" was permanently deleted (purged), archiving all associated bugs.`
+        })
+      });
+    } catch (auditErr) {
+      console.error('Audit logging failed for PROJECT_PURGED:', auditErr);
+    }
+
     await project.destroy();
 
     res.json({
-      message: 'Project permanently deleted'
+      message: 'Project permanently deleted and associated bugs archived.'
     });
   } catch (error) {
     console.error('Permanent delete project error:', error);

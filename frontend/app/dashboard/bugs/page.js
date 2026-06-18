@@ -21,7 +21,7 @@ export default function BugsPage() {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedPriority, setSelectedPriority] = useState('');
   const [selectedAssignee, setSelectedAssignee] = useState('');
-  
+
   // Local search query
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -58,7 +58,7 @@ export default function BugsPage() {
     try {
       setLoading(true);
       setError('');
-      
+
       const filterParams = {};
       if (selectedProject) filterParams.project_id = selectedProject;
       if (selectedStatus) filterParams.status = selectedStatus;
@@ -84,7 +84,7 @@ export default function BugsPage() {
     try {
       const activeProjects = await api.getProjects(false);
       setProjects(activeProjects);
-      
+
       const allUsers = await api.getUsers();
       setUsers(allUsers.filter(u => u.role === 'Developer' || u.role === 'Administrator'));
     } catch (err) {
@@ -102,7 +102,7 @@ export default function BugsPage() {
 
   const handleReportBug = async (e) => {
     e.preventDefault();
-    
+
     // Custom validation
     const newErrors = {};
     if (!reportProjectId) {
@@ -140,7 +140,7 @@ export default function BugsPage() {
       setReportSeverity('Minor');
       setReportErrors({});
       setShowReportModal(false);
-      
+
       // Refresh directory
       await fetchBugs();
     } catch (err) {
@@ -358,11 +358,10 @@ export default function BugsPage() {
       <div className="flex gap-6 border-b border-card-border pb-px">
         <button
           onClick={() => setCurrentTab('active')}
-          className={`pb-3 text-sm font-semibold tracking-wider transition-all relative cursor-pointer flex items-center gap-2 ${
-            currentTab === 'active' 
-              ? 'text-indigo-500 font-bold border-b-2 border-indigo-500' 
+          className={`pb-3 text-sm font-semibold tracking-wider transition-all relative cursor-pointer flex items-center gap-2 ${currentTab === 'active'
+              ? 'text-indigo-500 font-bold border-b-2 border-indigo-500'
               : 'text-subtitle hover:text-title'
-          }`}
+            }`}
         >
           <svg className="w-4 h-4 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -371,11 +370,10 @@ export default function BugsPage() {
         </button>
         <button
           onClick={() => setCurrentTab('recent')}
-          className={`pb-3 text-sm font-semibold tracking-wider transition-all relative cursor-pointer flex items-center gap-2 ${
-            currentTab === 'recent' 
-              ? 'text-indigo-500 font-bold border-b-2 border-indigo-500' 
+          className={`pb-3 text-sm font-semibold tracking-wider transition-all relative cursor-pointer flex items-center gap-2 ${currentTab === 'recent'
+              ? 'text-indigo-500 font-bold border-b-2 border-indigo-500'
               : 'text-subtitle hover:text-title'
-          }`}
+            }`}
         >
           <svg className="w-4 h-4 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -386,11 +384,10 @@ export default function BugsPage() {
         {isAdmin && (
           <button
             onClick={() => setCurrentTab('deleted')}
-            className={`pb-3 text-sm font-semibold tracking-wider transition-all relative cursor-pointer flex items-center gap-2 ${
-              currentTab === 'deleted' 
-                ? 'text-indigo-500 font-bold border-b-2 border-indigo-500' 
+            className={`pb-3 text-sm font-semibold tracking-wider transition-all relative cursor-pointer flex items-center gap-2 ${currentTab === 'deleted'
+                ? 'text-indigo-500 font-bold border-b-2 border-indigo-500'
                 : 'text-subtitle hover:text-title'
-            }`}
+              }`}
           >
             <svg className="w-4 h-4 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -606,8 +603,8 @@ export default function BugsPage() {
             {currentTab === 'deleted' ? 'No Deleted Bugs' : currentTab === 'recent' ? 'No Cleared Bugs' : 'No Active Bugs'}
           </h3>
           <p className="text-subtitle text-sm max-w-sm mt-1">
-            {currentTab === 'deleted' 
-              ? 'Soft-deleted bugs reside here for permanent delete or restore.' 
+            {currentTab === 'deleted'
+              ? 'Soft-deleted bugs reside here for permanent delete or restore.'
               : currentTab === 'recent'
                 ? 'Bugs that have been successfully resolved and cleared will display here.'
                 : 'All open development defect tickets show in this dashboard.'}
@@ -644,7 +641,7 @@ export default function BugsPage() {
                   <p className="text-subtitle text-xs line-clamp-1 leading-relaxed font-sans mb-1">
                     {bug.description}
                   </p>
-                  
+
                   {/* Upfront Metadata */}
                   <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-card-border/30 text-[10px] text-subtitle font-sans select-none">
                     <span className="text-slate-500">Reported by:</span>
@@ -659,7 +656,7 @@ export default function BugsPage() {
                   <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${getPriorityStyle(bug.priority)}`}>
                     {bug.priority}
                   </span>
-                  
+
                   {/* Severity Badge */}
                   <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${getSeverityStyle(bug.severity)}`}>
                     {bug.severity}
@@ -726,11 +723,11 @@ export default function BugsPage() {
 
       {/* Tester report dialog (modal) */}
       {showReportModal && (
-        <div 
+        <div
           onClick={handleCloseReportModal}
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn cursor-pointer"
         >
-          <div 
+          <div
             onClick={(e) => e.stopPropagation()}
             className="bg-card-bg border border-card-border rounded-3xl w-full max-w-xl p-8 shadow-2xl relative transition-colors duration-500 cursor-default"
           >
@@ -741,7 +738,7 @@ export default function BugsPage() {
               ×
             </button>
             <h2 className="text-2xl font-bold text-title mb-6 font-f1">Report New Bug</h2>
-            
+
             <form onSubmit={handleReportBug} noValidate className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="md:col-span-3 relative">
@@ -751,11 +748,10 @@ export default function BugsPage() {
                   <button
                     type="button"
                     onClick={() => setFormProjectDropdownOpen(!formProjectDropdownOpen)}
-                    className={`w-full bg-input-bg border rounded-xl px-4 py-3 text-left text-page-fg focus:outline-none transition-all flex items-center justify-between font-semibold cursor-pointer ${
-                      reportErrors.projectId 
-                        ? 'border-rose-500/50 focus:border-rose-500' 
+                    className={`w-full bg-input-bg border rounded-xl px-4 py-3 text-left text-page-fg focus:outline-none transition-all flex items-center justify-between font-semibold cursor-pointer ${reportErrors.projectId
+                        ? 'border-rose-500/50 focus:border-rose-500'
                         : 'border-input-border focus:border-indigo-500'
-                    }`}
+                      }`}
                   >
                     <span>
                       {reportProjectId ? projects.find(p => p.project_id.toString() === reportProjectId.toString())?.project_name : 'Select Project'}
@@ -805,11 +801,10 @@ export default function BugsPage() {
                     setReportTitle(e.target.value);
                     setReportErrors(prev => ({ ...prev, title: '' }));
                   }}
-                  className={`w-full bg-input-bg border rounded-xl px-4 py-3 text-page-fg placeholder-slate-500 focus:outline-none transition-all font-sans ${
-                    reportErrors.title 
-                      ? 'border-rose-500/50 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20' 
+                  className={`w-full bg-input-bg border rounded-xl px-4 py-3 text-page-fg placeholder-slate-500 focus:outline-none transition-all font-sans ${reportErrors.title
+                      ? 'border-rose-500/50 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20'
                       : 'border-input-border focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
-                  }`}
+                    }`}
                 />
                 {reportErrors.title && (
                   <p className="text-rose-400 text-xs mt-1.5 flex items-center gap-1 font-sans">
@@ -830,11 +825,10 @@ export default function BugsPage() {
                     setReportErrors(prev => ({ ...prev, description: '' }));
                   }}
                   rows={4}
-                  className={`w-full bg-input-bg border rounded-xl px-4 py-3 text-page-fg placeholder-slate-500 focus:outline-none transition-all resize-none font-sans ${
-                    reportErrors.description 
-                      ? 'border-rose-500/50 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20' 
+                  className={`w-full bg-input-bg border rounded-xl px-4 py-3 text-page-fg placeholder-slate-500 focus:outline-none transition-all resize-none font-sans ${reportErrors.description
+                      ? 'border-rose-500/50 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20'
                       : 'border-input-border focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
-                  }`}
+                    }`}
                 />
                 {reportErrors.description && (
                   <p className="text-rose-400 text-xs mt-1.5 flex items-center gap-1 font-sans">
@@ -870,7 +864,7 @@ export default function BugsPage() {
                             key={p}
                             type="button"
                             onClick={() => { setReportPriority(p); setFormPriorityDropdownOpen(false); }}
-                            className="w-full text-left px-4 py-2 text-xs hover:bg-input-bg/60 transition-colors flex items-center gap-2 font-sans block"
+                            className="w-full text-left px-4 py-2 text-xs hover:bg-input-bg/60 transition-colors flex items-center gap-2 font-sans "
                           >
                             <span className={`w-2 h-2 rounded-full ${getPriorityDotColor(p)}`}></span>
                             <span className={getPriorityTextColor(p)}>{p}</span>
@@ -907,7 +901,7 @@ export default function BugsPage() {
                             key={s}
                             type="button"
                             onClick={() => { setReportSeverity(s); setFormSeverityDropdownOpen(false); }}
-                            className="w-full text-left px-4 py-2 text-xs hover:bg-input-bg/60 transition-colors flex items-center gap-2 font-sans block"
+                            className="w-full text-left px-4 py-2 text-xs hover:bg-input-bg/60 transition-colors flex items-center gap-2 font-sans "
                           >
                             <span className={`w-2 h-2 rounded-full ${getSeverityDotColor(s)}`}></span>
                             <span className={getSeverityTextColor(s)}>{s}</span>
@@ -942,14 +936,14 @@ export default function BugsPage() {
 
       {/* Custom Confirmation Dialog (Modal) */}
       {showConfirmModal && (
-        <div 
+        <div
           onClick={() => {
             setShowConfirmModal(false);
             setConfirmAction(null);
           }}
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn cursor-pointer"
         >
-          <div 
+          <div
             onClick={(e) => e.stopPropagation()}
             className="bg-card-bg border border-card-border rounded-3xl w-full max-w-md p-8 shadow-2xl relative transition-colors duration-500 cursor-default"
           >
@@ -973,11 +967,10 @@ export default function BugsPage() {
                   setShowConfirmModal(false);
                   setConfirmAction(null);
                 }}
-                className={`w-1/2 text-white font-medium py-3 rounded-xl transition-all duration-400 ease-in-out shadow-lg cursor-pointer text-sm font-sans ${
-                  confirmIsDanger 
-                    ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/10 hover:shadow-rose-500/30' 
+                className={`w-1/2 text-white font-medium py-3 rounded-xl transition-all duration-400 ease-in-out shadow-lg cursor-pointer text-sm font-sans ${confirmIsDanger
+                    ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/10 hover:shadow-rose-500/30'
                     : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/10 hover:shadow-indigo-500/30'
-                }`}
+                  }`}
               >
                 {confirmButtonText}
               </button>

@@ -154,9 +154,9 @@ export default function UsersPage() {
       {/* Aggregate KPI Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
         {[
-          { 
-            title: 'Total Members', 
-            value: totalCount, 
+          {
+            title: 'Total Members',
+            value: totalCount,
             color: 'text-white',
             borderColor: 'border-card-border/40',
             icon: (
@@ -165,9 +165,9 @@ export default function UsersPage() {
               </svg>
             )
           },
-          { 
-            title: 'Administrators', 
-            value: adminCount, 
+          {
+            title: 'Administrators',
+            value: adminCount,
             color: 'text-violet-400',
             borderColor: 'border-violet-500/20',
             icon: (
@@ -176,9 +176,9 @@ export default function UsersPage() {
               </svg>
             )
           },
-          { 
-            title: 'Developers', 
-            value: devCount, 
+          {
+            title: 'Developers',
+            value: devCount,
             color: 'text-sky-400',
             borderColor: 'border-sky-500/20',
             icon: (
@@ -187,9 +187,9 @@ export default function UsersPage() {
               </svg>
             )
           },
-          { 
-            title: 'Testers', 
-            value: testerCount, 
+          {
+            title: 'Testers',
+            value: testerCount,
             color: 'text-amber-400',
             borderColor: 'border-amber-500/20',
             icon: (
@@ -201,7 +201,7 @@ export default function UsersPage() {
         ].map((card) => (
           <div
             key={card.title}
-            className={`bg-card-bg border ${card.borderColor} rounded-2xl p-5 transition-all hover:scale-[1.01] shadow-sm transition-colors duration-500 flex flex-col justify-between`}
+            className={`bg-card-bg border ${card.borderColor} rounded-2xl p-5 transition-all hover:scale-[1.01] shadow-sm duration-500 flex flex-col justify-between`}
           >
             <div className="flex justify-between items-start">
               <span className="block text-subtitle text-[10px] font-bold uppercase tracking-wider">
@@ -276,11 +276,10 @@ export default function UsersPage() {
               <button
                 key={role}
                 onClick={() => setRoleFilter(role)}
-                className={`px-4 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
-                  roleFilter === role
+                className={`px-4 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${roleFilter === role
                     ? 'bg-indigo-600/10 text-indigo-400 border-indigo-500/30'
                     : 'bg-input-bg border-input-border text-subtitle hover:text-title hover:border-slate-400'
-                }`}
+                  }`}
               >
                 {roleIcon}
                 {role === 'All' ? 'All Roles' : role}
@@ -356,33 +355,30 @@ export default function UsersPage() {
 
                       {/* Bugs Reported */}
                       <td className="py-4 px-6 text-center">
-                        <span className={`inline-flex items-center justify-center px-3 py-1 rounded-xl text-xs font-semibold font-mono ${
-                          u.reportedCount > 0 
-                            ? 'bg-slate-800 text-slate-300 border border-card-border' 
+                        <span className={`inline-flex items-center justify-center px-3 py-1 rounded-xl text-xs font-semibold font-mono ${u.reportedCount > 0
+                            ? 'bg-slate-800 text-slate-300 border border-card-border'
                             : 'text-slate-600'
-                        }`}>
+                          }`}>
                           {u.reportedCount}
                         </span>
                       </td>
 
                       {/* Bugs Assigned */}
                       <td className="py-4 px-6 text-center">
-                        <span className={`inline-flex items-center justify-center px-3 py-1 rounded-xl text-xs font-semibold font-mono ${
-                          u.assignedCount > 0 
-                            ? 'bg-indigo-950/40 text-indigo-400 border border-indigo-500/20' 
+                        <span className={`inline-flex items-center justify-center px-3 py-1 rounded-xl text-xs font-semibold font-mono ${u.assignedCount > 0
+                            ? 'bg-indigo-950/40 text-indigo-400 border border-indigo-500/20'
                             : 'text-slate-600'
-                        }`}>
+                          }`}>
                           {u.assignedCount}
                         </span>
                       </td>
 
                       {/* Bugs Resolved */}
                       <td className="py-4 px-6 text-center">
-                        <span className={`inline-flex items-center justify-center px-3 py-1 rounded-xl text-xs font-semibold font-mono ${
-                          u.resolvedCount > 0 
-                            ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/20' 
+                        <span className={`inline-flex items-center justify-center px-3 py-1 rounded-xl text-xs font-semibold font-mono ${u.resolvedCount > 0
+                            ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/20'
                             : 'text-slate-600'
-                        }`}>
+                          }`}>
                           {u.resolvedCount}
                         </span>
                       </td>

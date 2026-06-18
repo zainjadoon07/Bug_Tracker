@@ -16,7 +16,7 @@ export default function BugDetailPage() {
   const [developers, setDevelopers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
+
   // Input states
   const [newComment, setNewComment] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
@@ -39,7 +39,7 @@ export default function BugDetailPage() {
     try {
       setLoading(true);
       setError('');
-      
+
       const bugData = await api.getBugDetails(id);
       setBug(bugData);
 
@@ -67,7 +67,7 @@ export default function BugDetailPage() {
 
   const handlePostComment = async (e) => {
     e.preventDefault();
-    
+
     // Custom validation
     const newErrors = {};
     if (!newComment.trim()) {
@@ -313,10 +313,10 @@ export default function BugDetailPage() {
 
       {/* Main Grid Workspace */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
-        
+
         {/* LEFT COLUMN: Bug Technical Details and Comments Feed */}
         <div className="lg:col-span-2 space-y-6">
-          
+
           {/* Technical Info Block */}
           <div className="bg-card-bg border border-card-border rounded-2xl p-6 md:p-8 space-y-6">
             <div>
@@ -389,7 +389,7 @@ export default function BugDetailPage() {
                           <span className="text-[10px] text-subtitle font-sans">
                             {new Date(comm.created_at).toLocaleString()}
                           </span>
-                          
+
                           {/* Admin only comment delete button */}
                           {isAdmin && (
                             <button
@@ -432,7 +432,7 @@ export default function BugDetailPage() {
               </div>
             ) : (
               <form onSubmit={handlePostComment} noValidate className="space-y-3 pt-2">
-                <label className="block text-xs font-bold uppercase tracking-wider text-label font-sans flex items-center gap-1.5">
+                <label className=" text-xs font-bold uppercase tracking-wider text-label font-sans flex items-center gap-1.5">
                   <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
@@ -446,11 +446,10 @@ export default function BugDetailPage() {
                     setNewComment(e.target.value);
                     setCommentErrors(prev => ({ ...prev, comment: '' }));
                   }}
-                  className={`w-full bg-input-bg border rounded-xl px-4 py-3 text-sm text-page-fg placeholder-slate-500 focus:outline-none transition-all resize-none font-sans ${
-                    commentErrors.comment 
-                      ? 'border-rose-500/50 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20' 
-                      : 'border-input-border focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
-                  }`}
+                  className={`w-full bg-input-bg border rounded-xl px-4 py-3 text-sm text-page-fg placeholder-slate-500 focus:outline-none transition-all resize-none font-sans ${commentErrors.comment
+                    ? 'border-rose-500/50 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20'
+                    : 'border-input-border focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
+                    }`}
                 />
                 {commentErrors.comment && (
                   <p className="text-rose-400 text-xs mt-1.5 flex items-center gap-1 font-sans">
@@ -473,7 +472,7 @@ export default function BugDetailPage() {
 
         {/* RIGHT COLUMN: Ticket Settings, Assignment, Status Transitions */}
         <div className="space-y-6">
-          
+
           {/* Parameters Settings Card */}
           <div className="bg-card-bg border border-card-border rounded-2xl p-6 space-y-6">
             <h2 className="text-base font-bold text-title font-sans">
@@ -483,7 +482,7 @@ export default function BugDetailPage() {
             {/* Severity & Priority Row */}
             <div className="grid grid-cols-2 gap-4 pb-4 border-b border-card-border/60 font-sans">
               <div>
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-label mb-1 flex items-center gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-label mb-1 flex items-center gap-1">
                   <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
@@ -494,7 +493,7 @@ export default function BugDetailPage() {
                 </span>
               </div>
               <div>
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-label mb-1 flex items-center gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-label mb-1 flex items-center gap-1">
                   <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
@@ -508,13 +507,13 @@ export default function BugDetailPage() {
 
             {/* Lifecycle Status Transitions */}
             <div className="space-y-3">
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-label font-sans flex items-center gap-1">
+              <label className=" text-[10px] font-bold uppercase tracking-wider text-label font-sans flex items-center gap-1">
                 <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 Lifecycle Status
               </label>
-              
+
               {/* If user has authorization to update status */}
               {(!bug.deleted_at && (isAdmin || (isDeveloper && isAssignedToMe && bug.status !== 'Closed') || (isTester && bug.status !== 'Closed'))) ? (
                 <div className="relative font-sans">
@@ -568,7 +567,7 @@ export default function BugDetailPage() {
 
             {/* Developer Assignment Block */}
             <div className="space-y-3 pt-2 border-b border-card-border/60 pb-4">
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-label font-sans flex items-center gap-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-label font-sans flex items-center gap-1">
                 <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
@@ -824,14 +823,14 @@ export default function BugDetailPage() {
 
       {/* Custom Confirmation Dialog (Modal) */}
       {showConfirmModal && (
-        <div 
+        <div
           onClick={() => {
             setShowConfirmModal(false);
             setConfirmAction(null);
           }}
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn font-sans cursor-pointer"
         >
-          <div 
+          <div
             onClick={(e) => e.stopPropagation()}
             className="bg-card-bg border border-card-border rounded-3xl w-full max-w-md p-8 shadow-2xl relative transition-colors duration-500 cursor-default"
           >
@@ -855,11 +854,10 @@ export default function BugDetailPage() {
                   setShowConfirmModal(false);
                   setConfirmAction(null);
                 }}
-                className={`w-1/2 text-white font-medium py-3 rounded-xl transition-all duration-400 ease-in-out shadow-lg cursor-pointer text-sm font-sans ${
-                  confirmIsDanger 
-                    ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/10 hover:shadow-rose-500/30' 
-                    : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/10 hover:shadow-indigo-500/30'
-                }`}
+                className={`w-1/2 text-white font-medium py-3 rounded-xl transition-all duration-400 ease-in-out shadow-lg cursor-pointer text-sm font-sans ${confirmIsDanger
+                  ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/10 hover:shadow-rose-500/30'
+                  : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/10 hover:shadow-indigo-500/30'
+                  }`}
               >
                 {confirmButtonText}
               </button>

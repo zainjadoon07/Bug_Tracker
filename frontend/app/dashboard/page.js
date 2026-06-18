@@ -74,9 +74,9 @@ export default function DashboardPage() {
   }
 
   const kpis = [
-    { 
-      title: 'Total Projects', 
-      value: stats.totalProjects, 
+    {
+      title: 'Total Projects',
+      value: stats.totalProjects,
       color: 'text-indigo-500 dark:text-indigo-400 border-indigo-500/20',
       icon: (
         <svg className="w-5 h-5 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -84,9 +84,9 @@ export default function DashboardPage() {
         </svg>
       )
     },
-    { 
-      title: 'Total Defects', 
-      value: stats.totalBugs, 
+    {
+      title: 'Total Defects',
+      value: stats.totalBugs,
       color: 'text-violet-500 dark:text-violet-400 border-violet-500/20',
       icon: (
         <svg className="w-5 h-5 text-violet-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -94,9 +94,9 @@ export default function DashboardPage() {
         </svg>
       )
     },
-    { 
-      title: 'Open Issues', 
-      value: stats.openBugs, 
+    {
+      title: 'Open Issues',
+      value: stats.openBugs,
       color: 'text-amber-500 dark:text-amber-400 border-amber-500/20',
       icon: (
         <svg className="w-5 h-5 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -104,9 +104,9 @@ export default function DashboardPage() {
         </svg>
       )
     },
-    { 
-      title: 'Resolved Fixes', 
-      value: stats.resolvedBugs, 
+    {
+      title: 'Resolved Fixes',
+      value: stats.resolvedBugs,
       color: 'text-emerald-500 dark:text-emerald-400 border-emerald-500/20',
       icon: (
         <svg className="w-5 h-5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -114,9 +114,9 @@ export default function DashboardPage() {
         </svg>
       )
     },
-    { 
-      title: 'Critical Status', 
-      value: stats.criticalBugs, 
+    {
+      title: 'Critical Status',
+      value: stats.criticalBugs,
       color: 'text-rose-500 dark:text-rose-400 border-rose-500/20',
       icon: (
         <svg className="w-5 h-5 text-rose-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -146,7 +146,7 @@ export default function DashboardPage() {
         {kpis.map((card) => (
           <div
             key={card.title}
-            className="bg-card-bg border border-card-border rounded-2xl p-6 transition-all hover:scale-[1.02] shadow-sm hover:shadow-md transition-colors duration-500 flex flex-col justify-between"
+            className="bg-card-bg border border-card-border rounded-2xl p-6 transition-all hover:scale-[1.02] shadow-sm hover:shadow-md duration-500 flex flex-col justify-between"
           >
             <div className="flex justify-between items-start">
               <span className="text-subtitle text-xs font-semibold uppercase tracking-wider">
@@ -221,7 +221,7 @@ export default function DashboardPage() {
 
       {/* Breakdowns Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
+
         {/* Status Tracker Card */}
         <div className="bg-card-bg border border-card-border rounded-2xl p-6 transition-colors duration-500">
           <h2 className="text-lg font-semibold text-title mb-6 flex items-center gap-2">
@@ -269,26 +269,34 @@ export default function DashboardPage() {
           </h2>
           <div className="grid grid-cols-2 gap-4">
             {[
-              { label: 'Low', count: stats.bugsByPriority.Low, color: 'text-slate-500 bg-input-bg border-card-border', icon: (
-                <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              )},
-              { label: 'Medium', count: stats.bugsByPriority.Medium, color: 'text-sky-500 bg-sky-500/5 border-sky-500/20', icon: (
-                <svg className="w-4 h-4 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              )},
-              { label: 'High', count: stats.bugsByPriority.High, color: 'text-orange-500 bg-orange-500/5 border-orange-500/20', icon: (
-                <svg className="w-4 h-4 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              )},
-              { label: 'Critical', count: stats.bugsByPriority.Critical, color: 'text-rose-500 bg-rose-500/5 border-rose-500/20', icon: (
-                <svg className="w-4 h-4 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              )}
+              {
+                label: 'Low', count: stats.bugsByPriority.Low, color: 'text-slate-500 bg-input-bg border-card-border', icon: (
+                  <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )
+              },
+              {
+                label: 'Medium', count: stats.bugsByPriority.Medium, color: 'text-sky-500 bg-sky-500/5 border-sky-500/20', icon: (
+                  <svg className="w-4 h-4 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                )
+              },
+              {
+                label: 'High', count: stats.bugsByPriority.High, color: 'text-orange-500 bg-orange-500/5 border-orange-500/20', icon: (
+                  <svg className="w-4 h-4 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                )
+              },
+              {
+                label: 'Critical', count: stats.bugsByPriority.Critical, color: 'text-rose-500 bg-rose-500/5 border-rose-500/20', icon: (
+                  <svg className="w-4 h-4 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                )
+              }
             ].map((prio) => (
               <div
                 key={prio.label}

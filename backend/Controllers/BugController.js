@@ -3,7 +3,7 @@ const { Op } = require('sequelize');
 
 exports.createBug = async (req, res) => {
   try {
-    const { project_id, title, description, priority, severity } = req.body;
+    const { project_id, title, description, priority, severity, trackable_by_all } = req.body;
 
     if (!project_id || !title || !description || !priority || !severity) {
       return res.status(400).json({ error: 'All fields (project_id, title, description, priority, severity) are required' });
@@ -22,7 +22,8 @@ exports.createBug = async (req, res) => {
       priority,
       severity,
       status: 'Open',
-      reporter_id: req.user.user_id
+      reporter_id: req.user.user_id,
+      trackable_by_all: trackable_by_all || false
     });
 
     res.status(201).json({
@@ -118,12 +119,41 @@ exports.updateBug = async (req, res) => {
       return res.status(404).json({ error: 'Bug report not found' });
     }
 
-    const { title, description, priority, severity, status, assigned_user } = req.body;
+    const { title, description, priority, severity, status, assigned_user, trackable_by_all } = req.body;
     const { role, user_id } = req.user;
 
     // Role-based validations
     if (bug.status === 'Closed' && role !== 'Administrator') {
       return res.status(403).json({ error: 'Closed bugs can only be reopened or updated by Administrators.' });
+    }
+
+    const finalTrackable = (trackable_by_all !== undefined) ? trackable_by_all : bug.trackable_by_all;
+
+    // Enforce assignee requirements for status transitions (unless trackable by all)
+    if (status && !finalTrackable) {
+      const finalAssignee = (assigned_user !== undefined) ? assigned_user : bug.assigned_user;
+      
+      // 1. Unassigned bugs cannot change status to anything other than Open (or Assigned if assignment is being set in this request)
+      if (status !== 'Open' && status !== 'Assigned' && !finalAssignee) {
+        return res.status(400).json({ error: 'Status can only be updated once a developer/tester is assigned.' });
+      }
+
+      // 2. Unassigned bugs cannot be closed or resolved
+      if ((status === 'Closed' || status === 'Resolved') && !finalAssignee) {
+        return res.status(400).json({ error: 'Unassigned bugs cannot be closed or resolved. An assignee must be assigned first.' });
+      }
+
+      // 3. Testers cannot update status
+      if (role === 'Tester') {
+        return res.status(403).json({ error: 'Testers are not authorized to update bug status.' });
+      }
+
+      // 4. Developers can only update status if they are the assignee
+      if (role === 'Developer') {
+        if (bug.assigned_user !== user_id) {
+          return res.status(403).json({ error: 'Only the assigned Developer can update this bug status.' });
+        }
+      }
     }
 
     if (role === 'Developer') {
@@ -139,9 +169,9 @@ exports.updateBug = async (req, res) => {
     }
 
     if (role === 'Tester') {
-      // Testers can create bugs, verify fixes (change state to Closed), but cannot assign developers
-      if (assigned_user) {
-        return res.status(403).json({ error: 'Testers are not authorized to assign developers to bugs.' });
+      // Testers can assign to themselves, but not others
+      if (assigned_user && parseInt(assigned_user) !== user_id) {
+        return res.status(403).json({ error: 'Testers can only assign bugs to themselves.' });
       }
     }
 
@@ -159,6 +189,7 @@ exports.updateBug = async (req, res) => {
     if (priority !== undefined) bug.priority = priority;
     if (severity !== undefined) bug.severity = severity;
     if (assigned_user !== undefined) bug.assigned_user = assigned_user;
+    if (trackable_by_all !== undefined) bug.trackable_by_all = trackable_by_all;
 
     bug.updated_at = new Date();
     await bug.save();

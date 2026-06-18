@@ -86,7 +86,7 @@ export default function BugsPage() {
       setProjects(activeProjects);
 
       const allUsers = await api.getUsers();
-      setUsers(allUsers.filter(u => u.role === 'Developer' || u.role === 'Administrator'));
+      setUsers(allUsers.filter(u => u.role === 'Developer' || u.role === 'Tester' || u.role === 'Administrator'));
     } catch (err) {
       console.error('Failed to load filter options:', err);
     }

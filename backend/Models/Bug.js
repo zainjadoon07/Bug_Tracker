@@ -62,6 +62,11 @@ const Bug = sequelize.define('Bug', {
     type: DataTypes.DATE,
     allowNull: true,
     defaultValue: null
+  },
+  trackable_by_all: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    allowNull: false
   }
 }, {
   tableName: 'bugs',

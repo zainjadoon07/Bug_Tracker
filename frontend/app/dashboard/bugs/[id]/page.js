@@ -46,10 +46,10 @@ export default function BugDetailPage() {
       const commentsData = await api.getComments(id);
       setComments(commentsData);
 
-      // Fetch developers if user is Administrator (to populate dropdown)
+      // Fetch developers/testers if user is Administrator (to populate dropdown)
       if (user?.role === 'Administrator') {
         const allUsers = await api.getUsers();
-        setDevelopers(allUsers.filter(u => u.role === 'Developer'));
+        setDevelopers(allUsers.filter(u => u.role === 'Developer' || u.role === 'Tester'));
       }
     } catch (err) {
       console.error(err);
@@ -231,6 +231,11 @@ export default function BugDetailPage() {
   const isDeveloper = user?.role === 'Developer';
   const isTester = user?.role === 'Tester';
   const isAssignedToMe = bug.assigned_user === user?.user_id;
+
+  const canUpdateStatus = !bug.deleted_at && (
+    bug.trackable_by_all ||
+    (bug.assigned_user && (isAdmin || isAssignedToMe))
+  );
 
   // Status List in correct lifecycle order
   const statuses = ['Open', 'Assigned', 'In Progress', 'Testing', 'Resolved', 'Closed'];
@@ -515,7 +520,7 @@ export default function BugDetailPage() {
               </label>
 
               {/* If user has authorization to update status */}
-              {(!bug.deleted_at && (isAdmin || (isDeveloper && isAssignedToMe && bug.status !== 'Closed') || (isTester && bug.status !== 'Closed'))) ? (
+              {canUpdateStatus ? (
                 <div className="relative font-sans">
                   <button
                     type="button"
@@ -545,7 +550,7 @@ export default function BugDetailPage() {
                             }}
                             className="w-full text-left px-4 py-2 text-xs font-bold uppercase hover:bg-input-bg/60 transition-colors flex items-center gap-2"
                           >
-                            <span className={`w-2 h-2 rounded-full ${getStatusDotColor(s)}`}></span>
+                            <span className={`w-2.5 h-2.5 rounded-full ${getStatusDotColor(s)}`}></span>
                             <span className={getStatusTextColor(s)}>{s}</span>
                           </button>
                         ))}
@@ -555,10 +560,15 @@ export default function BugDetailPage() {
                 </div>
               ) : (
                 <div className="flex items-center font-sans">
-                  <span className={`inline-flex px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider ${getStatusStyle(bug.status)}`}>
+                  <span className={`inline-flex px-3 py-1.5 rounded-xl text-xs font-semibold uppercase tracking-wider ${getStatusStyle(bug.status)}`}>
                     {bug.status}
                   </span>
-                  {isDeveloper && !isAssignedToMe && bug.status !== 'Closed' && (
+                  {!bug.assigned_user && !bug.trackable_by_all && (
+                    <span className="text-[10px] text-amber-500/80 italic ml-2 flex items-center gap-1">
+                      {isAdmin ? '⚠️ Assign member to enable status updates' : 'Waiting for Administrator to assign ticket...'}
+                    </span>
+                  )}
+                  {(isDeveloper || isTester) && !isAssignedToMe && bug.assigned_user && bug.status !== 'Closed' && (
                     <span className="text-[10px] text-subtitle italic ml-2">Claim to update</span>
                   )}
                 </div>
@@ -632,8 +642,8 @@ export default function BugDetailPage() {
                     </>
                   )}
                 </div>
-              ) : (isDeveloper && !bug.deleted_at) ? (
-                // Developer claim options, but blocked if Closed
+              ) : ((isDeveloper || isTester) && !bug.deleted_at) ? (
+                // Developer / Tester claim options, but blocked if Closed
                 <div className="font-sans">
                   {bug.status === 'Closed' ? (
                     <div className="bg-input-bg border border-input-border rounded-xl px-3 py-2.5 text-sm text-page-fg">
@@ -669,202 +679,247 @@ export default function BugDetailPage() {
                   )}
                 </div>
               ) : (
-                // Tester view is read-only
+                // Guest view is read-only
                 <div className="bg-input-bg border border-input-border rounded-xl px-3 py-2.5 text-sm text-page-fg font-sans">
                   {bug.assignee?.name || <span className="text-amber-500/70 italic">Unassigned</span>}
                 </div>
               )}
             </div>
 
+            {/* Public Tracking Switch */}
+            {isAdmin && !bug.deleted_at && (
+              <div className="pt-4 border-t border-card-border/60 flex items-center justify-between font-sans">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-label">Public Tracking</span>
+                  <span className="text-[10px] text-subtitle">Allow all roles to track & change status</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setUpdating(true);
+                    setError('');
+                    try {
+                      await api.updateBug(id, { trackable_by_all: !bug.trackable_by_all });
+                      await fetchBugDetails();
+                    } catch (err) {
+                      console.error(err);
+                      setError('Failed to update tracking permissions.');
+                    } finally {
+                      setUpdating(false);
+                    }
+                  }}
+                  disabled={updating}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${bug.trackable_by_all ? 'bg-indigo-600' : 'bg-slate-700'
+                    }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${bug.trackable_by_all ? 'translate-x-4' : 'translate-x-0'
+                      }`}
+                  />
+                </button>
+              </div>
+            )}
+
+            {!isAdmin && bug.trackable_by_all && (
+              <div className="pt-4 border-t border-card-border/60 flex items-center gap-1.5 text-[10px] text-indigo-400 font-semibold font-sans">
+                <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                Open for public tracking (all roles)
+              </div>
+            )}
+
             {/* Admin Actions */}
             {isAdmin && (
-              <div className="space-y-3 pt-2">
-                {bug.deleted_at ? (
-                  <>
-                    {/* Restore Bug Action */}
+            <div className="space-y-3 pt-2">
+              {bug.deleted_at ? (
+                <>
+                  {/* Restore Bug Action */}
+                  <button
+                    onClick={() => {
+                      triggerConfirmation(
+                        'Restore Bug Ticket',
+                        `Are you sure you want to restore BUG-${bug.bug_id}: "${bug.title}" back to active directory?`,
+                        handleRestoreBug,
+                        'Restore Ticket',
+                        false
+                      );
+                    }}
+                    disabled={updating}
+                    className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-all duration-400 shadow-lg shadow-indigo-500/10 cursor-pointer font-sans"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 15.89M9 11l3-3 3 3m-3-3v12" />
+                    </svg>
+                    Restore Ticket
+                  </button>
+
+                  {/* Permanent/Purge Delete Bug Action */}
+                  <button
+                    onClick={() => {
+                      triggerConfirmation(
+                        'Permanently Purge Ticket',
+                        `Are you sure you want to permanently delete and purge BUG-${bug.bug_id}: "${bug.title}"? This action is destructive and cannot be undone.`,
+                        handlePurgeBug,
+                        'Purge Ticket',
+                        true
+                      );
+                    }}
+                    disabled={updating}
+                    className="w-full flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 cursor-pointer font-sans shadow-lg shadow-rose-500/10"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Purge Ticket (Permanent)
+                  </button>
+                </>
+              ) : (
+                <>
+                  {/* Clear Bug Action */}
+                  {bug.status === 'Resolved' && (
                     <button
                       onClick={() => {
                         triggerConfirmation(
-                          'Restore Bug Ticket',
-                          `Are you sure you want to restore BUG-${bug.bug_id}: "${bug.title}" back to active directory?`,
-                          handleRestoreBug,
-                          'Restore Ticket',
+                          'Clear & Close Bug',
+                          `Confirm that BUG-${bug.bug_id} is completed and verified. This will clear the bug and move it to the Recent Bugs directory.`,
+                          () => handleStatusChange('Closed'),
+                          'Clear & Close',
                           false
                         );
                       }}
                       disabled={updating}
-                      className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-all duration-400 shadow-lg shadow-indigo-500/10 cursor-pointer font-sans"
+                      className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-all duration-400 shadow-lg shadow-emerald-500/10 cursor-pointer font-sans"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 15.89M9 11l3-3 3 3m-3-3v12" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      Restore Ticket
+                      Clear & Verify Bug
                     </button>
+                  )}
 
-                    {/* Permanent/Purge Delete Bug Action */}
-                    <button
-                      onClick={() => {
-                        triggerConfirmation(
-                          'Permanently Purge Ticket',
-                          `Are you sure you want to permanently delete and purge BUG-${bug.bug_id}: "${bug.title}"? This action is destructive and cannot be undone.`,
-                          handlePurgeBug,
-                          'Purge Ticket',
-                          true
-                        );
-                      }}
-                      disabled={updating}
-                      className="w-full flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 cursor-pointer font-sans shadow-lg shadow-rose-500/10"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                      Purge Ticket (Permanent)
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    {/* Clear Bug Action */}
-                    {bug.status === 'Resolved' && (
-                      <button
-                        onClick={() => {
-                          triggerConfirmation(
-                            'Clear & Close Bug',
-                            `Confirm that BUG-${bug.bug_id} is completed and verified. This will clear the bug and move it to the Recent Bugs directory.`,
-                            () => handleStatusChange('Closed'),
-                            'Clear & Close',
-                            false
-                          );
-                        }}
-                        disabled={updating}
-                        className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-all duration-400 shadow-lg shadow-emerald-500/10 cursor-pointer font-sans"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Clear & Verify Bug
-                      </button>
-                    )}
+                  {/* Soft Delete Bug Action */}
+                  <button
+                    onClick={() => {
+                      triggerConfirmation(
+                        'Move Ticket to Recycle Bin',
+                        `Are you sure you want to soft-delete BUG-${bug.bug_id}: "${bug.title}"? This ticket will move to the Admins Recycle Bin.`,
+                        handleDeleteBug,
+                        'Delete Ticket',
+                        true
+                      );
+                    }}
+                    disabled={updating}
+                    className="w-full flex items-center justify-center gap-2 bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 border border-rose-500/20 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 cursor-pointer font-sans"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete Ticket
+                  </button>
+                </>
+              )}
+            </div>
+          )}
 
-                    {/* Soft Delete Bug Action */}
-                    <button
-                      onClick={() => {
-                        triggerConfirmation(
-                          'Move Ticket to Recycle Bin',
-                          `Are you sure you want to soft-delete BUG-${bug.bug_id}: "${bug.title}"? This ticket will move to the Admins Recycle Bin.`,
-                          handleDeleteBug,
-                          'Delete Ticket',
-                          true
-                        );
-                      }}
-                      disabled={updating}
-                      className="w-full flex items-center justify-center gap-2 bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 border border-rose-500/20 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 cursor-pointer font-sans"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                      Delete Ticket
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
+        </div>
 
-          </div>
-
-          {/* Details on Reporter */}
-          <div className="bg-card-bg border border-card-border rounded-2xl p-6 space-y-4 text-xs text-subtitle font-sans">
-            <h3 className="font-bold text-title uppercase tracking-wider text-[10px] flex items-center gap-1">
-              <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Audit Metadata
-            </h3>
-            <div className="space-y-2.5 pt-1">
-              <div className="flex justify-between items-center">
-                <span className="flex items-center gap-1">
-                  <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  Reporter:
-                </span>
-                <strong className="text-title">{bug.reporter?.name}</strong>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="flex items-center gap-1">
-                  <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  Email:
-                </span>
-                <span className="text-title select-all truncate max-w-[150px]" title={bug.reporter?.email}>{bug.reporter?.email}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="flex items-center gap-1">
-                  <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  Created:
-                </span>
-                <span className="text-title">{new Date(bug.created_at).toLocaleDateString()}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="flex items-center gap-1">
-                  <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Last Activity:
-                </span>
-                <span className="text-title">{new Date(bug.updated_at).toLocaleDateString()}</span>
-              </div>
+        {/* Details on Reporter */}
+        <div className="bg-card-bg border border-card-border rounded-2xl p-6 space-y-4 text-xs text-subtitle font-sans">
+          <h3 className="font-bold text-title uppercase tracking-wider text-[10px] flex items-center gap-1">
+            <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Audit Metadata
+          </h3>
+          <div className="space-y-2.5 pt-1">
+            <div className="flex justify-between items-center">
+              <span className="flex items-center gap-1">
+                <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Reporter:
+              </span>
+              <strong className="text-title">{bug.reporter?.name}</strong>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="flex items-center gap-1">
+                <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Email:
+              </span>
+              <span className="text-title select-all truncate max-w-[150px]" title={bug.reporter?.email}>{bug.reporter?.email}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="flex items-center gap-1">
+                <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Created:
+              </span>
+              <span className="text-title">{new Date(bug.created_at).toLocaleDateString()}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="flex items-center gap-1">
+                <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Last Activity:
+              </span>
+              <span className="text-title">{new Date(bug.updated_at).toLocaleDateString()}</span>
             </div>
           </div>
         </div>
       </div>
+    </div>
 
-      {/* Custom Confirmation Dialog (Modal) */}
-      {showConfirmModal && (
+      {/* Custom Confirmation Dialog (Modal) */ }
+  {
+    showConfirmModal && (
+      <div
+        onClick={() => {
+          setShowConfirmModal(false);
+          setConfirmAction(null);
+        }}
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn font-sans cursor-pointer"
+      >
         <div
-          onClick={() => {
-            setShowConfirmModal(false);
-            setConfirmAction(null);
-          }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn font-sans cursor-pointer"
+          onClick={(e) => e.stopPropagation()}
+          className="bg-card-bg border border-card-border rounded-3xl w-full max-w-md p-8 shadow-2xl relative transition-colors duration-500 cursor-default"
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-card-bg border border-card-border rounded-3xl w-full max-w-md p-8 shadow-2xl relative transition-colors duration-500 cursor-default"
-          >
-            <h2 className="text-xl font-bold text-title mb-4 font-f1">{confirmTitle}</h2>
-            <p className="text-subtitle text-sm mb-6 leading-relaxed font-sans">
-              {confirmMessage}
-            </p>
-            <div className="flex gap-4">
-              <button
-                onClick={() => {
-                  setShowConfirmModal(false);
-                  setConfirmAction(null);
-                }}
-                className="w-1/2 bg-card-bg hover:bg-input-bg border border-card-border hover:border-slate-400 text-title font-medium py-3 rounded-xl transition-all duration-300 cursor-pointer text-sm font-sans"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  if (confirmAction) confirmAction();
-                  setShowConfirmModal(false);
-                  setConfirmAction(null);
-                }}
-                className={`w-1/2 text-white font-medium py-3 rounded-xl transition-all duration-400 ease-in-out shadow-lg cursor-pointer text-sm font-sans ${confirmIsDanger
-                  ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/10 hover:shadow-rose-500/30'
-                  : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/10 hover:shadow-indigo-500/30'
-                  }`}
-              >
-                {confirmButtonText}
-              </button>
-            </div>
+          <h2 className="text-xl font-bold text-title mb-4 font-f1">{confirmTitle}</h2>
+          <p className="text-subtitle text-sm mb-6 leading-relaxed font-sans">
+            {confirmMessage}
+          </p>
+          <div className="flex gap-4">
+            <button
+              onClick={() => {
+                setShowConfirmModal(false);
+                setConfirmAction(null);
+              }}
+              className="w-1/2 bg-card-bg hover:bg-input-bg border border-card-border hover:border-slate-400 text-title font-medium py-3 rounded-xl transition-all duration-300 cursor-pointer text-sm font-sans"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                if (confirmAction) confirmAction();
+                setShowConfirmModal(false);
+                setConfirmAction(null);
+              }}
+              className={`w-1/2 text-white font-medium py-3 rounded-xl transition-all duration-400 ease-in-out shadow-lg cursor-pointer text-sm font-sans ${confirmIsDanger
+                ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/10 hover:shadow-rose-500/30'
+                : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/10 hover:shadow-indigo-500/30'
+                }`}
+            >
+              {confirmButtonText}
+            </button>
           </div>
         </div>
-      )}
-    </div>
+      </div>
+    )
+  }
+    </div >
   );
 }

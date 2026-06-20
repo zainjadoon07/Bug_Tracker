@@ -4,24 +4,6 @@ BugSentinel is a high-fidelity, production-grade defect lifecycle and issue trac
 
 ---
 
-## 📖 Table of Contents
-- [About BugSentinel](#about-bugsentinel)
-- [Key Features](#key-features)
-  - [Role-Based Access Control (RBAC)](#role-based-access-control-rbac)
-  - [Chronos SLA Countdown Engine](#chronos-sla-countdown-engine)
-  - [Operational Analytics Dashboard](#operational-analytics-dashboard)
-  - [Tamper-Evident Audit Trails](#tamper-evident-audit-trails)
-  - [Project Abandonment & Archiving](#project-abandonment--archiving)
-- [System Architecture](#system-architecture)
-- [Technology Stack](#technology-stack)
-- [Local Installation & Setup](#local-installation--setup)
-  - [Prerequisites](#prerequisites)
-  - [Backend Setup](#backend-setup)
-  - [Frontend Setup](#frontend-setup)
-- [Future Horizon (CI/CD & Cloud)](#future-horizon-cicd--cloud)
-
----
-
 ## 🔍 About BugSentinel
 BugSentinel is a two-tier application built to manage the complexity of software bugs. It moves away from generic, cluttered bug-reporting spreadsheets, introducing an interactive workspace where:
 - **Testers** file defects with precise severity and technical logs.
@@ -149,5 +131,3 @@ graph TD
 
 ---
 
-## 🔮 Future Horizon (CI/CD & Cloud)
-The next stage of BugSentinel's lifecycle introduces containerization, build validation workflows, and fully managed cloud infrastructure. For the complete containerization, CI/CD, and AWS architecture deployment specifications, please refer to the [Cloud and Deployment Plan](file:///c:/Users/zainu/OneDrive/Desktop/Two%20tier%20project/cloud_and_deployment_plan.md) in the root directory.

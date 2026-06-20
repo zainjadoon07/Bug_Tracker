@@ -1,0 +1,49 @@
+services:
+
+  database: 
+    image: mysql:8.0
+    container_name: DatabaseContainer
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: mydatabase
+    volumes:
+      - mysql_data:/var/lib/mysql
+    # --- ADD HEALTHCHECK HERE ---
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    container_name: FrontendContainer
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    container_name: BackendContainer
+    environment:
+      - DB_HOST=database
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_NAME=mydatabase
+    # --- UPDATE DEPENDS_ON HERE ---
+    depends_on:
+      database:
+        condition: service_healthy
+    volumes:
+      - backend_data:/usr/src/app/node_modules
+
+volumes:
+  mysql_data:
+  backend_data:

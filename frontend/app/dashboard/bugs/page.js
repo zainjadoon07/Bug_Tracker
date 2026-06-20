@@ -14,6 +14,14 @@ export default function BugsPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTick(t => t + 1);
+    }, 30000); // recalculate SLA tickers every 30s
+    return () => clearInterval(timer);
+  }, []);
 
   // Tab state: 'active', 'recent', or 'deleted'
   const [currentTab, setCurrentTab] = useState('active');
@@ -279,6 +287,82 @@ export default function BugsPage() {
 
   const isTester = user?.role === 'Tester';
   const isAdmin = user?.role === 'Administrator';
+
+  const getSlaBadgeDetails = (bug) => {
+    if (!bug.sla_deadline) return null;
+
+    const deadline = new Date(bug.sla_deadline).getTime();
+    
+    // Check if resolved / closed
+    if (bug.status === 'Resolved' || bug.status === 'Closed') {
+      if (bug.resolved_at) {
+        const resolved = new Date(bug.resolved_at).getTime();
+        if (resolved <= deadline) {
+          return {
+            text: 'SLA Met',
+            style: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+            icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'
+          };
+        } else {
+          return {
+            text: 'SLA Breached',
+            style: 'bg-rose-500/15 text-rose-400 border border-rose-500/30 font-bold',
+            icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'
+          };
+        }
+      }
+      return {
+        text: 'SLA Met',
+        style: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+        icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'
+      };
+    }
+
+    if (bug.status === 'Archived') {
+      return {
+        text: 'SLA Suspended',
+        style: 'bg-slate-500/10 text-slate-400 border border-slate-500/20',
+        icon: 'M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z'
+      };
+    }
+
+    // Active countdown
+    const now = Date.now();
+    const diff = deadline - now;
+
+    if (diff <= 0) {
+      return {
+        text: 'SLA Breached',
+        style: 'bg-rose-500/15 text-rose-400 border border-rose-500/30 animate-pulse font-bold',
+        icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'
+      };
+    }
+
+    // Format remaining time
+    const diffSec = Math.floor(diff / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHours = Math.floor(diffMin / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    let timeText = '';
+    if (diffDays > 0) {
+      timeText = `${diffDays}d ${diffHours % 24}h`;
+    } else if (diffHours > 0) {
+      timeText = `${diffHours}h ${diffMin % 60}m`;
+    } else {
+      timeText = `${diffMin}m`;
+    }
+
+    // Urgent if less than 4 hours remaining
+    const isUrgent = diffHours < 4;
+    return {
+      text: timeText,
+      style: isUrgent 
+        ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20 animate-pulse font-semibold'
+        : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-semibold',
+      icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'
+    };
+  };
 
   // Badge / Option helper colors
   const getPriorityStyle = (priority) => {
@@ -742,6 +826,20 @@ export default function BugsPage() {
                   <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusStyle(bug.status)}`}>
                     {bug.status}
                   </span>
+
+                  {/* SLA Badge */}
+                  {(() => {
+                    const sla = getSlaBadgeDetails(bug);
+                    if (!sla) return null;
+                    return (
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider ${sla.style}`}>
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sla.icon} />
+                        </svg>
+                        {sla.text}
+                      </span>
+                    );
+                  })()}
 
                   {/* Assignee display */}
                   <div className="text-xs text-right hidden sm:block pl-2 border-l border-card-border font-sans">

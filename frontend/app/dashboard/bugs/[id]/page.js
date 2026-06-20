@@ -32,6 +32,15 @@ export default function BugDetailPage() {
   // Ticket Audit Logs States
   const [auditLogs, setAuditLogs] = useState([]);
 
+  const [currentTime, setCurrentTime] = useState(Date.now());
+  
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000); // tick countdown every second
+    return () => clearInterval(timer);
+  }, []);
+
   // Custom Dropdown Open/Close states
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [assigneeDropdownOpen, setAssigneeDropdownOpen] = useState(false);
@@ -58,7 +67,7 @@ export default function BugDetailPage() {
       // Fetch developers/testers if user is Administrator (to populate dropdown)
       if (user?.role === 'Administrator') {
         const allUsers = await api.getUsers();
-        setDevelopers(allUsers.filter(u => u.role === 'Developer' || u.role === 'Tester'));
+        setDevelopers(allUsers.filter(u => u.role === 'Developer'));
       }
 
       // Fetch audit history
@@ -372,6 +381,211 @@ export default function BugDetailPage() {
       case 'Archived': return 'bg-rose-500';
       default: return 'bg-slate-500';
     }
+  };
+
+  const getSlaInfo = () => {
+    if (!bug || !bug.sla_deadline) return null;
+
+    const createdTime = new Date(bug.created_at).getTime();
+    const deadlineTime = new Date(bug.sla_deadline).getTime();
+    const totalSla = deadlineTime - createdTime;
+
+    let isMet = false;
+    let isMissed = false;
+    let isSuspended = bug.status === 'Archived';
+    let resolutionTimeText = '';
+    let elapsedPercent = 0;
+    let remainingText = '';
+    let urgent = false;
+    let breached = false;
+
+    if (bug.status === 'Resolved' || bug.status === 'Closed') {
+      if (bug.resolved_at) {
+        const resolvedTime = new Date(bug.resolved_at).getTime();
+        elapsedPercent = Math.min(100, Math.max(0, ((resolvedTime - createdTime) / totalSla) * 100));
+        
+        const timeTakenMs = resolvedTime - createdTime;
+        const takenSecs = Math.floor(timeTakenMs / 1000);
+        const takenMins = Math.floor(takenSecs / 60);
+        const takenHours = Math.floor(takenMins / 60);
+        const takenDays = Math.floor(takenHours / 24);
+
+        if (takenDays > 0) {
+          resolutionTimeText = `${takenDays}d ${takenHours % 24}h`;
+        } else if (takenHours > 0) {
+          resolutionTimeText = `${takenHours}h ${takenMins % 60}m`;
+        } else {
+          resolutionTimeText = `${takenMins}m`;
+        }
+
+        if (resolvedTime <= deadlineTime) {
+          isMet = true;
+        } else {
+          isMissed = true;
+        }
+      } else {
+        isMet = true;
+        elapsedPercent = 100;
+      }
+    } else if (isSuspended) {
+      elapsedPercent = 0;
+    } else {
+      const now = currentTime;
+      const remainingMs = deadlineTime - now;
+      elapsedPercent = Math.min(100, Math.max(0, ((now - createdTime) / totalSla) * 100));
+
+      if (remainingMs <= 0) {
+        breached = true;
+      } else {
+        const remSecs = Math.floor(remainingMs / 1000);
+        const remMins = Math.floor(remSecs / 60);
+        const remHours = Math.floor(remMins / 60);
+        const remDays = Math.floor(remHours / 24);
+
+        if (remDays > 0) {
+          remainingText = `${remDays}d ${remHours % 24}h ${remMins % 60}m`;
+        } else if (remHours > 0) {
+          remainingText = `${remHours}h ${remMins % 60}m ${remSecs % 60}s`;
+        } else {
+          remainingText = `${remMins}m ${remSecs % 60}s`;
+        }
+
+        if (remHours < 4) {
+          urgent = true;
+        }
+      }
+    }
+
+    return {
+      isMet,
+      isMissed,
+      isSuspended,
+      resolutionTimeText,
+      elapsedPercent,
+      remainingText,
+      urgent,
+      breached,
+      createdTime,
+      deadlineTime,
+      totalSla
+    };
+  };
+
+  const renderSlaCard = () => {
+    const sla = getSlaInfo();
+    if (!sla) return null;
+
+    let titleColor = 'text-indigo-400';
+    let progressColor = 'bg-indigo-600';
+    let cardBorder = 'border-card-border';
+    let pulseBg = '';
+
+    if (sla.isMet) {
+      titleColor = 'text-emerald-400';
+      progressColor = 'bg-emerald-500';
+    } else if (sla.isMissed || sla.breached) {
+      titleColor = 'text-rose-400';
+      progressColor = 'bg-rose-500';
+      cardBorder = 'border-rose-500/30';
+      if (sla.breached) {
+        pulseBg = 'animate-pulse shadow-rose-500/5';
+      }
+    } else if (sla.urgent) {
+      titleColor = 'text-orange-400';
+      progressColor = 'bg-orange-500';
+      cardBorder = 'border-orange-500/40';
+      pulseBg = 'animate-pulse';
+    } else if (sla.isSuspended) {
+      titleColor = 'text-slate-400';
+      progressColor = 'bg-slate-700';
+    }
+
+    return (
+      <div className={`bg-card-bg border ${cardBorder} rounded-2xl p-6 space-y-4 font-sans transition-all duration-500 ${pulseBg}`}>
+        <div className="flex justify-between items-center">
+          <h2 className="text-sm font-bold text-title flex items-center gap-2">
+            <svg className={`w-4 h-4 ${titleColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            SLA Resolution Window
+          </h2>
+          {sla.isMet && <span className="bg-emerald-500/10 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-500/20 uppercase tracking-wider font-sans">Met</span>}
+          {sla.isMissed && <span className="bg-rose-500/10 text-rose-400 text-[10px] font-bold px-2 py-0.5 rounded border border-rose-500/20 uppercase tracking-wider font-mono">Missed</span>}
+          {sla.isSuspended && <span className="bg-slate-500/10 text-slate-400 text-[10px] font-bold px-2 py-0.5 rounded border border-slate-500/20 uppercase tracking-wider font-sans">Suspended</span>}
+          {sla.breached && !sla.isMissed && <span className="bg-rose-500/10 text-rose-400 text-[10px] font-bold px-2 py-0.5 rounded border border-rose-500/20 uppercase tracking-wider font-sans animate-pulse">Breached</span>}
+          {!sla.isMet && !sla.isMissed && !sla.isSuspended && !sla.breached && (
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider font-sans ${sla.urgent ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'}`}>
+              Active
+            </span>
+          )}
+        </div>
+
+        {/* Dynamic timer display */}
+        <div className="py-1">
+          {sla.isSuspended ? (
+            <div className="text-slate-400 text-xs italic">
+              Project abandoned. SLA tracking has been suspended.
+            </div>
+          ) : sla.isMet ? (
+            <div className="space-y-1">
+              <div className="text-xl font-bold text-emerald-400 font-mono">Resolved in Time</div>
+              <div className="text-xs text-subtitle">Completed within {sla.resolutionTimeText}</div>
+            </div>
+          ) : sla.isMissed ? (
+            <div className="space-y-1">
+              <div className="text-xl font-bold text-rose-400 font-mono">SLA Deadline Missed</div>
+              <div className="text-xs text-subtitle">Resolution took {sla.resolutionTimeText} (Breached)</div>
+            </div>
+          ) : sla.breached ? (
+            <div className="space-y-1">
+              <div className="text-xl font-bold text-rose-400 font-mono">SLA Breached</div>
+              <div className="text-xs text-subtitle">Ticket has exceeded its resolution window!</div>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <div className="text-xs text-subtitle uppercase font-semibold tracking-wider font-sans">Time Remaining</div>
+              <div className={`text-2xl font-bold font-mono tracking-tight ${sla.urgent ? 'text-orange-400' : 'text-title'}`}>
+                {sla.remainingText}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Progress bar */}
+        {!sla.isSuspended && (
+          <div className="space-y-1.5">
+            <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden border border-slate-700/50">
+              <div
+                className={`h-full rounded-full transition-all duration-1000 ${progressColor}`}
+                style={{ width: `${sla.elapsedPercent}%` }}
+              ></div>
+            </div>
+            <div className="flex justify-between text-[10px] text-slate-500 font-semibold uppercase tracking-wider font-mono">
+              <span>{Math.round(sla.elapsedPercent)}% Elapsed</span>
+              <span>{sla.isMet || sla.isMissed || sla.breached ? '100% SLA Limit' : '100%'}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Details dates list */}
+        <div className="pt-2 border-t border-card-border/50 text-[10px] space-y-2 text-subtitle font-mono">
+          <div className="flex justify-between">
+            <span className="text-slate-500">Created:</span>
+            <span className="text-title">{new Date(sla.createdTime).toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-500">Deadline:</span>
+            <span className="text-title">{new Date(sla.deadlineTime).toLocaleString()}</span>
+          </div>
+          {bug.resolved_at && (
+            <div className="flex justify-between">
+              <span className="text-slate-500">Resolved:</span>
+              <span className="text-emerald-400">{new Date(bug.resolved_at).toLocaleString()}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -717,6 +931,9 @@ export default function BugDetailPage() {
 
         {/* RIGHT COLUMN: Ticket Settings, Assignment, Status Transitions */}
         <div className="space-y-6">
+
+          {/* SLA Card Display */}
+          {renderSlaCard()}
 
           {/* Parameters Settings Card */}
           <div className="bg-card-bg border border-card-border rounded-2xl p-6 space-y-6">

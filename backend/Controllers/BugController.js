@@ -1,6 +1,16 @@
 const { Bug, Project, User, AuditLog } = require('../Models');
 const { Op } = require('sequelize');
 
+const calculateSlaDeadline = (createdAt, priority) => {
+  const baseTime = createdAt ? new Date(createdAt).getTime() : Date.now();
+  let durationMs = 0;
+  if (priority === 'Critical') durationMs = 24 * 60 * 60 * 1000;
+  else if (priority === 'High') durationMs = 72 * 60 * 60 * 1000;
+  else if (priority === 'Medium') durationMs = 5 * 24 * 60 * 60 * 1000;
+  else durationMs = 10 * 24 * 60 * 60 * 1000;
+  return new Date(baseTime + durationMs);
+};
+
 exports.createBug = async (req, res) => {
   try {
     const { project_id, title, description, priority, severity, trackable_by_all } = req.body;
@@ -23,7 +33,8 @@ exports.createBug = async (req, res) => {
       severity,
       status: 'Open',
       reporter_id: req.user.user_id,
-      trackable_by_all: trackable_by_all || false
+      trackable_by_all: trackable_by_all || false,
+      sla_deadline: calculateSlaDeadline(null, priority)
     });
 
     // Create Audit Log
@@ -201,14 +212,35 @@ exports.updateBug = async (req, res) => {
       if (!validStatuses.includes(status)) {
         return res.status(400).json({ error: `Invalid status: ${status}` });
       }
+      
+      const wasClosedOrResolved = oldStatus === 'Resolved' || oldStatus === 'Closed';
+      const isClosedOrResolved = status === 'Resolved' || status === 'Closed';
+      
+      if (isClosedOrResolved && !wasClosedOrResolved) {
+        bug.resolved_at = new Date();
+      } else if (!isClosedOrResolved && wasClosedOrResolved) {
+        bug.resolved_at = null;
+      }
+      
       bug.status = status;
     }
 
     if (title !== undefined) bug.title = title;
     if (description !== undefined) bug.description = description;
-    if (priority !== undefined) bug.priority = priority;
+    if (priority !== undefined && priority !== bug.priority) {
+      bug.priority = priority;
+      bug.sla_deadline = calculateSlaDeadline(bug.created_at, priority);
+    }
     if (severity !== undefined) bug.severity = severity;
-    if (assigned_user !== undefined) bug.assigned_user = assigned_user;
+    if (assigned_user !== undefined) {
+      if (assigned_user !== null) {
+        const targetUser = await User.findByPk(assigned_user);
+        if (!targetUser || targetUser.role !== 'Developer') {
+          return res.status(400).json({ error: 'Bugs can only be assigned to Developers.' });
+        }
+      }
+      bug.assigned_user = assigned_user;
+    }
     if (trackable_by_all !== undefined) bug.trackable_by_all = trackable_by_all;
 
     bug.updated_at = new Date();

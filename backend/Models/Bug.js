@@ -67,6 +67,14 @@ const Bug = sequelize.define('Bug', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
     allowNull: false
+  },
+  sla_deadline: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  resolved_at: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
 }, {
   tableName: 'bugs',

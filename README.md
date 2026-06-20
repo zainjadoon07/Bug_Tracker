@@ -131,3 +131,106 @@ graph TD
 
 ---
 
+## 🐳 Containerization & Deployment (Docker)
+
+Docker allows you to spin up the entire BugSentinel suite (Next.js frontend, Express API backend, and MySQL database) in seconds without installing any local databases or runtime configurations.
+
+### 1. Running Locally with Docker Compose
+To build and start all services locally in detached (background) mode:
+1.  Make sure you have [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
+2.  Run the following command from the root project directory:
+    ```bash
+    docker compose up -d --build
+    ```
+3.  **What happens under the hood:**
+    *   Docker builds your custom Next.js frontend and Express backend containers.
+    *   It pulls the official `mysql:8.0` image and creates a persistent database volume.
+    *   The backend container automatically waits (using a healthcheck) until MySQL is fully booted and initialized before it connects.
+    *   The application automatically executes database migrations and table syncs.
+4.  **Access Points:**
+    *   **Frontend Web App:** `http://localhost:3000`
+    *   **Backend API Service:** `http://localhost:5000`
+    *   **MySQL Database:** Exposed on port `3307` of your host computer (password: `password`, database: `mydatabase`).
+5.  To stop and tear down all running containers and networks:
+    ```bash
+    docker compose down
+    ```
+
+---
+
+### 2. Publishing Images to Docker Hub
+To distribute your BugSentinel builds so other developers or production cloud environments can run them without compiling the source code:
+
+1.  **Authenticate with Docker Hub:**
+    ```bash
+    docker login
+    ```
+2.  **Build and Tag the Images:**
+    Replace `<your-dockerhub-username>` with your actual Docker Hub account handle:
+    ```bash
+    # Build & tag the Backend API
+    docker build -t <your-dockerhub-username>/bugsentinel-backend:latest ./backend
+
+    # Build & tag the Frontend UI
+    docker build -t <your-dockerhub-username>/bugsentinel-frontend:latest ./frontend
+    ```
+3.  **Push the Images to the Registry:**
+    ```bash
+    docker push <your-dockerhub-username>/bugsentinel-backend:latest
+    docker push <your-dockerhub-username>/bugsentinel-frontend:latest
+    ```
+
+---
+
+### 3. Pulling and Running Prebuilt Images (No Source Code Needed)
+Once your images are pushed to Docker Hub, anyone else can run your project instantly. They only need to create this simple `docker-compose.yml` file on their machine and run it (no source code, folders, or Dockerfiles required!):
+
+```yaml
+services:
+
+  database: 
+    image: mysql:8.0
+    container_name: DatabaseContainer
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: mydatabase
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: <your-dockerhub-username>/bugsentinel-backend:latest
+    container_name: BackendContainer
+    ports:
+      - "5000:5000"
+    environment:
+      - DB_HOST=database
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_NAME=mydatabase
+    depends_on:
+      database:
+        condition: service_healthy
+
+  frontend:
+    image: <your-dockerhub-username>/bugsentinel-frontend:latest
+    container_name: FrontendContainer
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
+```
+
+To start the prebuilt containers, they simply run:
+```bash
+docker compose up -d
+```
